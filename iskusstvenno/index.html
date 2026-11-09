@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>gorecz — искусственно</title>
+  <meta name="description" content="gorecz — искусственно. Архивный фрагмент 002." />
+  <meta name="theme-color" content="#030811" />
+  <meta property="og:title" content="gorecz — искусственно" />
+  <meta property="og:description" content="gorecz — искусственно. Архивный фрагмент 002." />
+  <meta property="og:type" content="music.song" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23030811'/%3E%3Ccircle cx='16' cy='16' r='4.2' fill='%237ce0ff'/%3E%3C/svg%3E" />
+
+  <script>document.documentElement.classList.add('js');setTimeout(function(){if(window.GS)return;var b=document.getElementById('boot-screen');if(b)b.classList.add('hidden');document.documentElement.classList.add('is-ready')},3600)</script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body id="top">
+  <!-- Boot Screen & Config -->
+  <div id="boot-screen">
+    <div class="boot-terminal">
+      <div class="boot-text">[ system.submerge // signal_002 initialization ]</div>
+      <div class="boot-subtext">Глубоководная акустическая среда. Рекомендуются наушники.</div>
+      <div class="boot-actions">
+        <button id="boot-spatial-on" class="boot-btn">> enable_submerged_3d_audio()</button>
+        <button id="boot-spatial-off" class="boot-btn">> standard_stereo_mode()</button>
+      </div>
+    </div>
+  </div>
+  <canvas id="fog" aria-hidden="true"></canvas>
+
+  <div class="page">
+    <header class="topbar fade-in">
+      <a class="brand" href="#top">gorecz</a>
+      <span class="release-meta">single / 2026</span>
+      <nav class="top-right" aria-label="Navigation">
+        <button class="mini" id="miniBtn" type="button" aria-label="Play">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5.5v13l11-6.5z"/><path class="i-pause" d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>
+          <span id="miniTime">0:00</span>
+        </button>
+        <a href="../index.html#from-002">archive</a>
+        <a href="#links">listen</a>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ───────────── hero: submerged record + cables + name ───────────── -->
+      <section class="hero">
+        <div class="stage fade-rise">
+          <div class="tt" id="tt">
+            <!-- Слой реального преломления фона сквозь ледяную глыбу -->
+            <div class="ice-refract-backdrop" aria-hidden="true"></div>
+
+            <!-- 1. Глыба льда, вмороженные провода, трещины и органы управления -->
+            <svg class="tt-base" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <defs>
+                <!-- Фильтр кристаллического излома льда -->
+                <filter id="fIceDistort" x="-10%" y="-10%" width="120%" height="120%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="3" seed="7" result="noise"/>
+                  <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+                </filter>
+
+                <!-- Объемный градиент мутного голубого льда -->
+                <linearGradient id="gIceBlock" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#c8ecff" stop-opacity=".26"/>
+                  <stop offset=".25" stop-color="#5a9bc4" stop-opacity=".16"/>
+                  <stop offset=".65" stop-color="#14324d" stop-opacity=".38"/>
+                  <stop offset="1" stop-color="#071829" stop-opacity=".55"/>
+                </linearGradient>
+
+                <!-- Острая ледяная кромка (фаска со свечением) -->
+                <linearGradient id="gIceRim" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#ffffff" stop-opacity=".9"/>
+                  <stop offset=".35" stop-color="#8ce2ff" stop-opacity=".55"/>
+                  <stop offset=".7" stop-color="#2c628c" stop-opacity=".3"/>
+                  <stop offset="1" stop-color="#baf0ff" stop-opacity=".75"/>
+                </linearGradient>
+
+                <radialGradient id="gIceWell" cx="392" cy="390" r="335" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#051322" stop-opacity=".75"/>
+                  <stop offset=".82" stop-color="#0c2640" stop-opacity=".55"/>
+                  <stop offset=".95" stop-color="#63b4de" stop-opacity=".3"/>
+                  <stop offset="1" stop-color="#d4f3ff" stop-opacity=".5"/>
+                </radialGradient>
+
+                <linearGradient id="gKnob" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#a6e1ff" stop-opacity=".5"/>
+                  <stop offset="1" stop-color="#0d263d" stop-opacity=".85"/>
+                </linearGradient>
+
+                <filter id="fShadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="32"/>
+                </filter>
+                <filter id="fSparkGlow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="4" result="b"/>
+                  <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+
+              <!-- Внешние кабели, уходящие из воды прямо внутрь ледяной глыбы -->
+              <g class="tt-wires" fill="none" stroke-linecap="round">
+                <path d="M -420,40 C -160,180 -50,220 140,240" stroke="#05111f" stroke-width="7"/>
+                <path d="M -420,40 C -160,180 -50,220 140,240" stroke="#4d88b0" stroke-width="2" stroke-opacity=".5"/>
+                <path class="wire-spark" d="M -420,40 C -160,180 -50,220 140,240" stroke="#a3e5ff" stroke-width="3" filter="url(#fSparkGlow)"/>
+
+                <path d="M -360,210 C -120,285 -20,300 180,310" stroke="#040d18" stroke-width="5"/>
+                <path class="wire-spark s2" d="M -360,210 C -120,285 -20,300 180,310" stroke="#ffffff" stroke-width="2.2" filter="url(#fSparkGlow)"/>
+
+                <path d="M -320,580 C -90,520 40,580 260,550" stroke="#05101c" stroke-width="6"/>
+                <path class="wire-spark s3" d="M -320,580 C -90,520 40,580 260,550" stroke="#7ce0ff" stroke-width="2.5" filter="url(#fSparkGlow)"/>
+
+                <path d="M 620,-180 C 650,-30 720,40 760,160" stroke="#05111e" stroke-width="5.5"/>
+                <path class="wire-spark s2" d="M 620,-180 C 650,-30 720,40 760,160" stroke="#a3e5ff" stroke-width="2.2" filter="url(#fSparkGlow)"/>
+              </g>
+
+              <!-- Глубокая водная тень и каустическое свечение под глыбой льда -->
+              <polygon points="38,52 240,22 610,30 960,44 984,260 970,590 946,748 640,766 210,754 28,728 14,430" fill="#01060d" opacity=".75" filter="url(#fShadow)"/>
+
+              <!-- САМА ГЛЫБА КОЛОТОГО ЛЬДА (неровный граненый многоугольник вместо прямоугольника) -->
+              <polygon points="26,34 195,12 580,18 830,10 972,32 990,220 978,540 962,742 710,768 380,760 42,740 10,510 18,210"
+                       fill="url(#gIceBlock)" stroke="url(#gIceRim)" stroke-width="2.5"/>
+
+              <!-- Внутренние3D-грани сколов льда и преломление света -->
+              <g fill="none" stroke-linejoin="round">
+                <polyline points="26,34 85,78 240,48 580,18" stroke="#ffffff" stroke-opacity=".35" stroke-width="1.5"/>
+                <polyline points="830,10 895,64 972,32" stroke="#ffffff" stroke-opacity=".45" stroke-width="1.8"/>
+                <polyline points="972,32 938,240 978,540 924,690 962,742" stroke="#a3e5ff" stroke-opacity=".28" stroke-width="1.4"/>
+                <polyline points="42,740 92,685 380,760" stroke="#8ce2ff" stroke-opacity=".25" stroke-width="1.5"/>
+                <!-- Крупный блик мокрой ледяной грани сверху -->
+                <polygon points="26,34 195,12 580,18 240,48 85,78" fill="#ffffff" fill-opacity=".09"/>
+                <polygon points="830,10 972,32 895,64" fill="#c8f0ff" fill-opacity=".12"/>
+              </g>
+
+              <!-- Внутренние трещины внутри толщи льда -->
+              <g stroke="#d8f5ff" stroke-linecap="round" fill="none" opacity=".45">
+                <path d="M 85,78 L 145,140 L 130,195 M 145,140 L 210,155" stroke-width="1.3"/>
+                <path d="M 895,64 L 835,135 L 790,125 M 835,135 L 850,210" stroke-width="1.2"/>
+                <path d="M 92,685 L 165,620 L 230,645 M 165,620 L 180,565" stroke-width="1.4"/>
+                <path d="M 580,18 L 555,82 L 610,115" stroke-width="1"/>
+              </g>
+
+              <!-- Вырубленная во льду чаша под ледяной диск -->
+              <circle cx="392" cy="390" r="334" fill="url(#gIceWell)" stroke="#8ce2ff" stroke-opacity=".4" stroke-width="2" filter="url(#fIceDistort)"/>
+              <circle cx="392" cy="390" r="326" fill="none" stroke="#ffffff" stroke-opacity=".22" stroke-width="1" stroke-dasharray="40 18 12 25"/>
+
+              <!-- Вмороженное в лед окно осциллографа -->
+              <rect x="600" y="652" width="204" height="86" rx="10" fill="#030c17" fill-opacity=".7" stroke="#7ce0ff" stroke-opacity=".45" stroke-width="1.5"/>
+              <rect x="607" y="658" width="190" height="74" rx="6" fill="#020810" fill-opacity=".85"/>
+              <path d="M702 658v74M607 695h190" stroke="#7ce0ff" stroke-opacity=".18" stroke-width="1.2"/>
+              <!-- Иней и блик на стекле осциллографа -->
+              <path d="M610 660h65l-24 70h-41z" fill="#d8f5ff" fill-opacity=".07"/>
+              <text x="702" y="754" font-size="10" letter-spacing="2" fill="#8ce2ff" opacity=".7" text-anchor="middle">CRYO // SCOPE</text>
+
+              <!-- Вмороженная кнопка пуска и ледяной регулятор скорости -->
+              <rect x="814" y="664" width="62" height="52" rx="12" fill="#081d30" fill-opacity=".65" stroke="#8ce2ff" stroke-opacity=".5"/>
+              <text x="855" y="695" text-anchor="middle" font-size="12" letter-spacing="1.5" fill="#c8ecff">ток</text>
+              <circle cx="922" cy="690" r="34" fill="url(#gKnob)" stroke="#9be5ff" stroke-opacity=".6"/>
+              <circle cx="922" cy="690" r="21" fill="#051322" stroke="#5da7cf"/>
+              <path id="knobPtr" d="M922 669v11" stroke="#ffffff" stroke-width="3" stroke-linecap="round" transform="rotate(0 922 690)"/>
+              <circle id="knobHit" cx="922" cy="690" r="46" fill="#000" fill-opacity="0" style="pointer-events:all"/>
+              <text id="lblSlow" x="892" y="754" font-size="10" fill="#6b9ab8" text-anchor="middle">slow</text>
+              <text id="lbl33" x="922" y="754" font-size="10" fill="#ffffff" text-anchor="middle">33</text>
+              <text id="lbl45" x="952" y="754" font-size="10" fill="#6b9ab8" text-anchor="middle">45</text>
+              <text x="78" y="728" font-size="14" letter-spacing="3.5" fill="#9be5ff" opacity=".65">gorecz // ice_002</text>
+            </svg>
+            <canvas class="tt-scope" id="scope"></canvas>
+
+            <!-- 2. ПЛАСТИНКА ИЗ ПРОЗРАЧНОГО ГОЛУБОГО ЛЬДА С ТРЕЩИНАМИ -->
+            <svg class="tt-disc" id="disc" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <defs>
+                <radialGradient id="gVinyl" cx="392" cy="390" r="300" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#8cdbff" stop-opacity=".45"/>
+                  <stop offset=".45" stop-color="#1d567d" stop-opacity=".55"/>
+                  <stop offset=".82" stop-color="#0b2842" stop-opacity=".7"/>
+                  <stop offset=".96" stop-color="#7ce0ff" stop-opacity=".5"/>
+                  <stop offset="1" stop-color="#ffffff" stop-opacity=".85"/>
+                </radialGradient>
+                <radialGradient id="gLabel" cx="370" cy="366" r="112" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#ffffff"/>
+                  <stop offset=".5" stop-color="#a8d8f0"/>
+                  <stop offset="1" stop-color="#3a6b8c"/>
+                </radialGradient>
+                <path id="labelArc" d="M324 390a68 68 0 1 1 136 0a68 68 0 1 1 -136 0"/>
+              </defs>
+              <!-- Основа ледяного диска -->
+              <circle cx="392" cy="390" r="300" fill="url(#gVinyl)"/>
+              <g id="grooves"></g>
+              <!-- Радиальные трещины внутри самой ледяной пластинки -->
+              <g stroke="#e6f9ff" stroke-opacity=".38" stroke-width="1.2" fill="none">
+                <path d="M 392,292 L 375,210 L 340,165 M 375,210 L 405,145"/>
+                <path d="M 485,360 L 565,335 L 635,355 M 565,335 L 610,290"/>
+                <path d="M 315,455 L 235,510 L 175,500 M 235,510 L 215,565"/>
+                <path d="M 435,478 L 490,565 L 545,605"/>
+              </g>
+              <!-- Неровная сверкающая ледяная кромка диска -->
+              <circle cx="392" cy="390" r="299" fill="none" stroke="#ffffff" stroke-opacity=".65" stroke-width="2" filter="url(#fIceDistort)"/>
+              <g id="specks"></g>
+              <!-- Замороженное центральное яблоко -->
+              <circle cx="392" cy="390" r="98" fill="url(#gLabel)" stroke="#ffffff" stroke-width="1.5"/>
+              <circle cx="392" cy="390" r="88" fill="none" stroke="#10304a" stroke-opacity=".35" stroke-dasharray="18 8 4 8"/>
+              <text font-size="9.2" letter-spacing="2.1" fill="#06192b"><textPath href="#labelArc">искусственно   gorecz   002   frozen</textPath></text>
+              <text x="392" y="450" text-anchor="middle" font-size="40" font-weight="300" fill="#06192b">g</text>
+              <circle cx="392" cy="390" r="6" fill="#030811" stroke="#7ce0ff" stroke-width="1.5"/>
+            </svg>
+
+            <!-- 2b. strobe ring -->
+            <svg class="tt-strobe" id="strobe" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <g id="ticks"></g>
+            </svg>
+
+            <!-- 3. Ледяное преломление света на вращающемся диске -->
+            <svg class="tt-sheen" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <defs>
+                <radialGradient id="gSheen" cx="392" cy="390" r="300" gradientUnits="userSpaceOnUse">
+                  <stop offset=".1" stop-color="#ffffff" stop-opacity="0"/>
+                  <stop offset=".55" stop-color="#b8f0ff" stop-opacity=".38"/>
+                  <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+                </radialGradient>
+                <filter id="fSheen" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="8"/></filter>
+              </defs>
+              <g filter="url(#fSheen)" fill="url(#gSheen)">
+                <path d="M392,390 L158.9,201.2 A300,300 0 0 1 265.2,118.1 Z"/>
+                <path d="M392,390 L625.1,578.8 A300,300 0 0 1 518.8,661.9 Z"/>
+              </g>
+            </svg>
+
+            <!-- 4. Заледеневший тонарм с искрящей иглой -->
+            <svg class="tt-arm" id="arm" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <defs>
+                <linearGradient id="gWeight" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#8cdbff"/>
+                  <stop offset="1" stop-color="#102a42"/>
+                </linearGradient>
+                <filter id="fArm" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="10" dy="16" stdDeviation="8" flood-color="#01060d" flood-opacity=".65"/>
+                </filter>
+              </defs>
+              <g filter="url(#fArm)">
+                <line x1="872" y1="150" x2="916" y2="150" stroke="#7fbcdb" stroke-width="8"/>
+                <rect x="912" y="132" width="66" height="36" rx="6" fill="url(#gWeight)" stroke="#ffffff" stroke-opacity=".7"/>
+                <line x1="872" y1="150" x2="394" y2="150" stroke="#d8f4ff" stroke-width="7" stroke-linecap="round"/>
+                <line x1="872" y1="148" x2="396" y2="148" stroke="#ffffff" stroke-opacity=".9" stroke-width="2" stroke-linecap="round"/>
+                <!-- Сосульки/наледь вдоль трубки тонарма -->
+                <path d="M 780,153 L 775,162 L 768,153 M 640,153 L 634,165 L 626,153 M 510,153 L 506,161 L 500,153" fill="#c8f2ff" opacity=".75"/>
+                <g transform="rotate(14 394 150)">
+                  <rect x="370" y="137" width="46" height="26" rx="4" fill="#0d263d" stroke="#a3e5ff" stroke-width="1.5"/>
+                  <path d="M372 143q-16 -6 -28 -1" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+                </g>
+                <circle cx="394" cy="150" r="4" fill="#ffffff" filter="url(#fSparkGlow)"/>
+                <circle cx="872" cy="150" r="50" fill="url(#gKnob)" stroke="#b8f0ff" stroke-width="2"/>
+                <circle cx="872" cy="150" r="32" fill="#07192b" stroke="#6bb5d9"/>
+                <circle cx="872" cy="150" r="11" fill="#d8f5ff"/>
+              </g>
+              <circle id="armHub" cx="872" cy="150" r="2" fill="none"/>
+              <circle id="armTip" cx="394" cy="150" r="2" fill="none"/>
+              <line id="armHit" x1="372" y1="150" x2="985" y2="150" stroke="#000" stroke-opacity="0" stroke-width="52" stroke-linecap="round" style="pointer-events:stroke"/>
+            </svg>
+
+            <span class="led" id="led" aria-hidden="true"></span>
+          </div>
+          <button class="stage-btn" id="stageBtn" type="button" aria-label="Play искусственно"></button>
+        </div>
+
+        <div class="hero-copy">
+          <h1 class="wordmark" aria-label="искусственно"><span class="w" aria-hidden="true">искусственно</span><span class="dot" id="dot" aria-hidden="true"></span></h1>
+          <p class="subtitle fade-in" style="--d:2.2s">submerged ambient / electronic hybrid</p>
+        </div>
+
+        <p class="hint fade-in" id="hint" style="--d:2.6s">подать сигнал на носитель</p>
+
+        <!-- HUD Metadata (Лор архива 002) -->
+        <div class="hud-meta fade-in" aria-hidden="true" style="--d:3.0s">
+          <div class="hud-line">id  // arc-002</div>
+          <div class="hud-line">env // submerged_core</div>
+          <div class="hud-line">medium // h2o · copper_wire</div>
+          <div class="hud-line">sig // <span class="hud-blink">artificial_pulse</span></div>
+        </div>
+
+        <!-- lyrics -->
+        <div id="hud-lyrics" aria-hidden="true"><p class="ly-prev"></p><p class="ly-cur"></p></div>
+
+      </section>
+
+      <!-- ───────────── player ───────────── -->
+      <section class="player" id="listen" aria-label="Player">
+        <div class="player-row">
+          <button class="pp" id="playBtn" type="button" aria-label="Play">
+            <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle class="ring-bg" cx="32" cy="32" r="30"/><circle class="ring-fg" id="ring" cx="32" cy="32" r="30"/></svg>
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5.5v13l11-6.5z"/><path class="i-pause" d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>
+          </button>
+          <div class="track">
+            <strong id="trackName">искусственно</strong>
+            <span>gorecz</span>
+          </div>
+          
+          <label class="vol-control"><span>vol</span><input id="vol" type="range" min="0" max="1" step="0.01" aria-label="Громкость"></label>
+          
+          <span class="time" id="time">0:00 / 0:00</span>
+        </div>
+
+        <div class="wave-wrap">
+          <canvas id="wave" role="slider" tabindex="0" aria-label="Track position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0:00"></canvas>
+          <span class="wave-tip" id="waveTip" aria-hidden="true">0:00</span>
+        </div>
+        <p class="status" id="status" role="status"></p>
+
+        <div class="mix" id="mix">
+          <label><span>echo</span><input type="range" data-fx="0" min="0" max="1" step="0.01" value="0" aria-label="echo"></label>
+          <label><span>space</span><input type="range" data-fx="1" min="0" max="1" step="0.01" value="0" aria-label="space"></label>
+          <label><span>flange</span><input type="range" data-fx="2" min="0" max="1" step="0.01" value="0" aria-label="flange"></label>
+          <label><span>chorus</span><input type="range" data-fx="3" min="0" max="1" step="0.01" value="0" aria-label="chorus"></label>
+          <p class="fx-note" id="fxNote"></p>
+        </div>
+
+        <audio id="audio" src="audio/ISKUSSTVENNO.mp3" preload="metadata"></audio>
+      </section>
+
+      <!-- ───────────── neural response ───────────── -->
+      <section class="mind" id="mind" aria-label="Neural response">
+        <h2 class="cap">neural response</h2>
+        <canvas id="brain" aria-hidden="true"></canvas>
+        <p class="mind-note">stylised · submerged cortex activity · move the cursor over it to excite neurons, drag to turn</p>
+      </section>
+
+      <!-- ───────────── about ───────────── -->
+      <section class="about" id="about">
+        <h2 class="cap">about the release</h2>
+        <div class="about-body">
+          <p class="poem" id="poem"><em>искусственно</em> — архивный фрагмент 002. Холодная толща воды, оголенные провода под напряжением и синтетический пульс за запотевшим стеклом. Попытка отличить живой импульс от запрограммированного эха на глубине.</p>
+          <dl class="credits">
+            <div><dt>released</dt><dd>November 2026</dd></div>
+            <div><dt>written / performed by</dt><dd>gorecz</dd></div>
+            <div><dt>length</dt><dd id="length">—</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ───────────── links ───────────── -->
+      <section class="links" id="links" aria-label="Listen">
+        <h2 class="cap">listen</h2>
+        <ul class="link-list">
+          <li><a class="row" href="#"><span class="row-name">soundcloud</span><span class="row-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a></li>
+          <li><a class="row" href="#"><span class="row-name">youtube</span><span class="row-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a></li>
+          <li><a class="row" href="#"><span class="row-name">spotify</span><span class="row-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a></li>
+          <li><a class="row" href="#"><span class="row-name">telegram</span><span class="row-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="foot-mark" aria-hidden="true">gorecz</div>
+      <div class="foot-row">
+        <span>© 2026 gorecz</span>
+        <span>gorecz archive / 002</span>
+      </div>
+    </footer>
+  </div>
+
+  <div id="end-screen" role="dialog" aria-modal="true" aria-label="искусственно has ended" aria-hidden="true" tabindex="-1" inert>
+    <canvas id="outro-cv" aria-hidden="true"></canvas>
+    <nav class="end-links" aria-label="Listen on">
+      <a href="#" class="end-link" target="_blank" rel="noopener noreferrer"><span>Spotify</span></a>
+      <a href="#" class="end-link" target="_blank" rel="noopener noreferrer"><span>Apple Music</span></a>
+      <a href="#" class="end-link" target="_blank" rel="noopener noreferrer"><span>VK Музыка</span></a>
+      <a href="#" class="end-link" target="_blank" rel="noopener noreferrer"><span>Яндекс Музыка</span></a>
+    </nav>
+    <button id="end-replay" class="end-again" type="button" aria-label="Play again"><span>again</span></button>
+    <button id="end-back" class="end-back" type="button">back to the page</button>
+    <p class="end-cap">искусственно · 002</p>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="engine.js"></script>
+  <script src="brain.js"></script>
+  <script src="cursor.js"></script>
+  <script src="scope.js"></script>
+  <script src="deck.js"></script>
+  <script src="outro.js"></script>
+  <script>GoreczBrain.mount(document.getElementById('brain'), function () { return window.GS; });</script>
+<script>
+document.querySelector('a[href$="#from-002"]').addEventListener('click', function (e) {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+  e.preventDefault();
+  var a = this, c = document.createElement('div');
+  c.style.cssText = 'position:fixed;inset:0;z-index:999;background:#030811;opacity:0;transition:opacity .6s ease';
+  document.body.appendChild(c);
+  requestAnimationFrame(function () { c.style.opacity = 1; });
+  setTimeout(function () { location.href = a.href; }, 650);
+});
+</script>
+</body>
+</html>
