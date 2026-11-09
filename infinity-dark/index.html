@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>gorecz — infinity.dark</title>
+  <meta name="description" content="gorecz — infinity.dark. Listen to the single and explore the release." />
+  <meta name="theme-color" content="#05060a" />
+  <meta property="og:title" content="gorecz — infinity.dark" />
+  <meta property="og:description" content="gorecz — infinity.dark. Listen to the single and explore the release." />
+  <meta property="og:type" content="music.song" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2305060a'/%3E%3Ccircle cx='16' cy='16' r='4.2' fill='%23b3324f'/%3E%3C/svg%3E" />
+
+  <!-- Failsafe: if anything below breaks, the page still shows itself after a moment. -->
+  <script>document.documentElement.classList.add('js');setTimeout(function(){if(window.GS)return;var b=document.getElementById('boot-screen');if(b)b.classList.add('hidden');document.documentElement.classList.add('is-ready')},3600)</script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body id="top">
+  <!-- Boot Screen & Config -->
+  <div id="boot-screen">
+    <div class="boot-terminal">
+      <div class="boot-text">[ system.wake // audio environment check ]</div>
+      <div class="boot-subtext">Для полного погружения рекомендуются наушники.</div>
+      <div class="boot-actions">
+        <button id="boot-spatial-on" class="boot-btn">> enable_spatial_3d_audio()</button>
+        <button id="boot-spatial-off" class="boot-btn">> standard_stereo_mode()</button>
+      </div>
+    </div>
+  </div>
+  <canvas id="fog" aria-hidden="true"></canvas>
+
+  <div class="page">
+    <header class="topbar fade-in">
+      <a class="brand" href="#top">gorecz</a>
+      <span class="release-meta">single / 2026</span>
+      <nav class="top-right" aria-label="Navigation">
+        <button class="mini" id="miniBtn" type="button" aria-label="Play">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5.5v13l11-6.5z"/><path class="i-pause" d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>
+          <span id="miniTime">0:00</span>
+        </button>
+        <a href="../index.html#from-001">archive</a>
+        <a href="#links">listen</a>
+      </nav>
+    </header>
+
+    <main>
+      <!-- ───────────── hero: the record + the name ───────────── -->
+      <section class="hero">
+        <div class="stage fade-rise">
+          <div class="tt" id="tt">
+
+            <!-- 1. plinth, platter, controls (static) -->
+            <svg class="tt-base" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <defs>
+                <linearGradient id="gPlinth" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#262a33"/>
+                  <stop offset=".5" stop-color="#14171d"/>
+                  <stop offset="1" stop-color="#090b0f"/>
+                </linearGradient>
+                <linearGradient id="gEdge" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#6b7384" stop-opacity=".85"/>
+                  <stop offset=".5" stop-color="#2b2f39" stop-opacity=".5"/>
+                  <stop offset="1" stop-color="#171a20" stop-opacity=".9"/>
+                </linearGradient>
+                <radialGradient id="gPlatter" cx="392" cy="390" r="330" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#1b1e25"/>
+                  <stop offset=".9" stop-color="#0e1016"/>
+                  <stop offset="1" stop-color="#2b303b"/>
+                </radialGradient>
+                <linearGradient id="gKnob" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#3b414d"/>
+                  <stop offset="1" stop-color="#101217"/>
+                </linearGradient>
+                <filter id="fShadow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="30"/></filter>
+              </defs>
+
+              <rect x="36" y="64" width="964" height="730" rx="26" fill="#000" opacity=".62" filter="url(#fShadow)"/>
+              <rect x="8" y="8" width="984" height="764" rx="20" fill="url(#gPlinth)" stroke="url(#gEdge)" stroke-width="2"/>
+              <rect x="17" y="17" width="966" height="746" rx="14" fill="none" stroke="#fff" stroke-opacity=".05"/>
+
+              <g fill="#0a0c10" stroke="#3a404c" stroke-width="1.5">
+                <circle cx="46" cy="46" r="8"/><circle cx="954" cy="46" r="8"/>
+                <circle cx="46" cy="734" r="8"/><circle cx="954" cy="734" r="8"/>
+              </g>
+              <g stroke="#565d6c" stroke-width="1.5" stroke-linecap="round">
+                <path d="M41 46h10" transform="rotate(38 46 46)"/>
+                <path d="M949 46h10" transform="rotate(-24 954 46)"/>
+                <path d="M41 734h10" transform="rotate(66 46 734)"/>
+                <path d="M949 734h10" transform="rotate(12 954 734)"/>
+              </g>
+
+              <circle cx="392" cy="390" r="340" fill="#040507" opacity=".6"/>
+              <circle cx="392" cy="390" r="327" fill="url(#gPlatter)" stroke="#353a46" stroke-width="2"/>
+
+              <defs>
+                <linearGradient id="gRecess" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#000" stop-opacity=".9"/>
+                  <stop offset="1" stop-color="#000" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+
+              <!-- stereo scope: a recessed glass window on the deck (scope.js draws the beam on the canvas that sits over it) -->
+              <rect x="600" y="652" width="204" height="86" rx="13" fill="#0c0e13" stroke="#343945"/>
+              <rect x="607" y="658" width="190" height="74" rx="9" fill="#04060a"/>
+              <path d="M702 658v74M607 695h190" stroke="#8b94a6" stroke-opacity=".13" stroke-width="1.4"/>
+              <path d="M626 692v6M645 692v6M664 692v6M683 692v6M721 692v6M740 692v6M759 692v6M778 692v6M699 676h6M699 714h6" stroke="#8b94a6" stroke-opacity=".2" stroke-width="1.4"/>
+              <rect x="607" y="658" width="190" height="74" rx="9" fill="none" stroke="url(#gRecess)" stroke-width="4"/>
+              <path d="M616 660h50l-16 70h-38z" fill="#fff" fill-opacity=".022"/>
+              <path d="M614 739h176" stroke="#fff" stroke-opacity=".07" stroke-width="1.4" stroke-linecap="round"/>
+              <text x="702" y="752" font-size="10" letter-spacing="1.2" fill="#6d7484" text-anchor="middle">stereo</text>
+
+              <rect x="814" y="664" width="62" height="52" rx="14" fill="#11141a" stroke="#343945"/>
+              <text x="855" y="695" text-anchor="middle" font-size="13" letter-spacing="1.2" fill="#7c8496">start</text>
+              <circle cx="922" cy="690" r="34" fill="url(#gKnob)" stroke="#3a404c"/>
+              <circle cx="922" cy="690" r="21" fill="#0b0d11" stroke="#454b58"/>
+              <path id="knobPtr" d="M922 669v11" stroke="#aab1bf" stroke-width="3" stroke-linecap="round" transform="rotate(0 922 690)"/>
+              <circle id="knobHit" cx="922" cy="690" r="46" fill="#000" fill-opacity="0" style="pointer-events:all"/>
+              <text id="lblSlow" x="892" y="752" font-size="10" fill="#6d7484" text-anchor="middle">slow</text>
+              <text id="lbl33" x="922" y="752" font-size="10" fill="#d4d9e4" text-anchor="middle">33</text>
+              <text id="lbl45" x="952" y="752" font-size="10" fill="#6d7484" text-anchor="middle">45</text>
+              <text x="78" y="740" font-size="15" letter-spacing="3" fill="#5c6373">gorecz</text>
+            </svg>
+            <canvas class="tt-scope" id="scope"></canvas>
+
+            <!-- 2. the record (spins; grooves and ticks are drawn by script.js) -->
+            <svg class="tt-disc" id="disc" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <defs>
+                <radialGradient id="gVinyl" cx="392" cy="390" r="300" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#181b22"/>
+                  <stop offset=".55" stop-color="#0e1015"/>
+                  <stop offset="1" stop-color="#07080b"/>
+                </radialGradient>
+                <radialGradient id="gLabel" cx="370" cy="366" r="112" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stop-color="#ece8e1"/>
+                  <stop offset=".6" stop-color="#d6d1c8"/>
+                  <stop offset="1" stop-color="#b6b0a6"/>
+                </radialGradient>
+                <path id="labelArc" d="M324 390a68 68 0 1 1 136 0a68 68 0 1 1 -136 0"/>
+              </defs>
+              <circle cx="392" cy="390" r="300" fill="url(#gVinyl)"/>
+              <g id="grooves"></g>
+              <circle cx="392" cy="390" r="299" fill="none" stroke="#fff" stroke-opacity=".13" stroke-width="1.4"/>
+              <g id="specks"></g>
+              <circle cx="392" cy="390" r="98" fill="url(#gLabel)"/>
+              <circle cx="392" cy="390" r="90" fill="none" stroke="#1a1817" stroke-opacity=".18"/>
+              <text font-size="9.5" letter-spacing="2.4" fill="#2a2724"><textPath href="#labelArc">infinity.dark   gorecz   001   33⅓ rpm</textPath></text>
+              <text x="392" y="450" text-anchor="middle" font-size="40" font-weight="300" fill="#1b1a1c">g</text>
+              <circle cx="392" cy="390" r="5" fill="#0a0b0e" stroke="#8e887d" stroke-width="1"/>
+            </svg>
+
+            <!-- 2b. strobe ring on the platter rim: not locked to the record, it stands still at exactly 33 (deck.js) -->
+            <svg class="tt-strobe" id="strobe" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <g id="ticks"></g>
+            </svg>
+
+            <!-- 3. light on the vinyl (stays still while the record turns) -->
+            <svg class="tt-sheen" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <defs>
+                <radialGradient id="gSheen" cx="392" cy="390" r="300" gradientUnits="userSpaceOnUse">
+                  <stop offset=".2" stop-color="#cfe0ff" stop-opacity="0"/>
+                  <stop offset=".62" stop-color="#cfe0ff" stop-opacity=".17"/>
+                  <stop offset="1" stop-color="#cfe0ff" stop-opacity="0"/>
+                </radialGradient>
+                <filter id="fSheen" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="9"/></filter>
+              </defs>
+              <g filter="url(#fSheen)" fill="url(#gSheen)">
+                <path d="M392,390 L158.9,201.2 A300,300 0 0 1 265.2,118.1 Z"/>
+                <path d="M392,390 L625.1,578.8 A300,300 0 0 1 518.8,661.9 Z"/>
+              </g>
+            </svg>
+
+            <!-- 4. tonearm (drawn pointing left, rotated around its pivot by script.js) -->
+            <svg class="tt-arm" id="arm" viewBox="0 0 1000 780" aria-hidden="true" focusable="false">
+              <defs>
+                <linearGradient id="gWeight" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#3a404c"/>
+                  <stop offset="1" stop-color="#14161c"/>
+                </linearGradient>
+                <filter id="fArm" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="10" dy="16" stdDeviation="8" flood-color="#000" flood-opacity=".55"/>
+                </filter>
+              </defs>
+              <g filter="url(#fArm)">
+                <line x1="872" y1="150" x2="916" y2="150" stroke="#7b8291" stroke-width="8"/>
+                <rect x="912" y="132" width="66" height="36" rx="9" fill="url(#gWeight)" stroke="#565d6c"/>
+                <line x1="872" y1="150" x2="394" y2="150" stroke="#b9becb" stroke-width="7" stroke-linecap="round"/>
+                <line x1="872" y1="148" x2="396" y2="148" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" stroke-linecap="round"/>
+                <line x1="872" y1="153" x2="396" y2="153" stroke="#000" stroke-opacity=".35" stroke-width="1.4" stroke-linecap="round"/>
+                <g transform="rotate(14 394 150)">
+                  <rect x="370" y="137" width="46" height="26" rx="4" fill="#171a20" stroke="#6a7080"/>
+                  <path d="M372 143q-16 -6 -28 -1" fill="none" stroke="#aab0bd" stroke-width="3" stroke-linecap="round"/>
+                </g>
+                <circle cx="394" cy="150" r="2.6" fill="#e6eaf2"/>
+                <circle cx="872" cy="150" r="50" fill="url(#gKnob)" stroke="#3b404c" stroke-width="2"/>
+                <circle cx="872" cy="150" r="32" fill="#0d0f13" stroke="#454b58"/>
+                <circle cx="872" cy="150" r="11" fill="#8b92a0"/>
+              </g>
+              <circle id="armHub" cx="872" cy="150" r="2" fill="none"/>
+              <circle id="armTip" cx="394" cy="150" r="2" fill="none"/>
+              <line id="armHit" x1="372" y1="150" x2="985" y2="150" stroke="#000" stroke-opacity="0" stroke-width="52" stroke-linecap="round" style="pointer-events:stroke"/>
+            </svg>
+
+            <span class="led" id="led" aria-hidden="true"></span>
+          </div>
+          <button class="stage-btn" id="stageBtn" type="button" aria-label="Play infinity.dark"></button>
+        </div>
+
+        <div class="hero-copy">
+          <h1 class="wordmark" aria-label="infinity.dark"><span class="w" aria-hidden="true">infinity</span><span class="dot" id="dot" aria-hidden="true"></span><span class="w" aria-hidden="true">dark</span></h1>
+          <p class="subtitle fade-in" style="--d:2.2s">cold ambient / lovemusic</p>
+        </div>
+
+        <p class="hint fade-in" id="hint" style="--d:2.6s">press the record</p>
+
+        <!-- HUD Metadata (Лор архива) -->
+        <div class="hud-meta fade-in" aria-hidden="true" style="--d:3.0s">
+          <div class="hud-line">id  // arc-001</div>
+          <div class="hud-line">loc // YKB_56.83</div>
+          <div class="hud-line">cls // cold_ambient</div>
+          <div class="hud-line">sys // <span class="hud-blink">encrypted</span></div>
+        </div>
+
+        <!-- lyrics: the current line arrives word by word in the empty left side of the hero; the one before it stays above, smaller (script.js fills it) -->
+        <div id="hud-lyrics" aria-hidden="true"><p class="ly-prev"></p><p class="ly-cur"></p></div>
+
+      </section>
+
+      <!-- ───────────── player ───────────── -->
+      <section class="player" id="listen" aria-label="Player">
+        <div class="player-row">
+          <button class="pp" id="playBtn" type="button" aria-label="Play">
+            <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle class="ring-bg" cx="32" cy="32" r="30"/><circle class="ring-fg" id="ring" cx="32" cy="32" r="30"/></svg>
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path class="i-play" d="M8 5.5v13l11-6.5z"/><path class="i-pause" d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>
+          </button>
+          <div class="track">
+            <strong id="trackName">infinity.dark</strong>
+            <span>gorecz</span>
+          </div>
+          
+          <!-- Громкость теперь живет здесь, отвязанная от эффектов -->
+          <label class="vol-control"><span>vol</span><input id="vol" type="range" min="0" max="1" step="0.01" aria-label="Громкость"></label>
+          
+          <span class="time" id="time">0:00 / 0:00</span>
+        </div>
+
+        <div class="wave-wrap">
+          <canvas id="wave" role="slider" tabindex="0" aria-label="Track position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0:00"></canvas>
+          <span class="wave-tip" id="waveTip" aria-hidden="true">0:00</span>
+        </div>
+        <p class="status" id="status" role="status"></p>
+
+        <!-- Блок эффектов без громкости -->
+        <div class="mix" id="mix">
+          <label><span>echo</span><input type="range" data-fx="0" min="0" max="1" step="0.01" value="0" aria-label="echo"></label>
+          <label><span>space</span><input type="range" data-fx="1" min="0" max="1" step="0.01" value="0" aria-label="space"></label>
+          <label><span>flange</span><input type="range" data-fx="2" min="0" max="1" step="0.01" value="0" aria-label="flange"></label>
+          <label><span>chorus</span><input type="range" data-fx="3" min="0" max="1" step="0.01" value="0" aria-label="chorus"></label>
+          <p class="fx-note" id="fxNote"></p>
+        </div>
+
+        <audio id="audio" src="audio/infinitydark.mp3" preload="metadata"></audio>
+      </section>
+
+      <!-- ───────────── neural response ───────────── -->
+      <section class="mind" id="mind" aria-label="Neural response">
+        <h2 class="cap">neural response</h2>
+        <canvas id="brain" aria-hidden="true"></canvas>
+        <p class="mind-note">stylised · live activity by region · move the cursor over it to excite neurons, drag to turn</p>
+      </section>
+
+      <!-- ───────────── about ───────────── -->
+      <section class="about" id="about">
+        <h2 class="cap">about the release</h2>
+        <div class="about-body">
+          <p class="poem" id="poem"><em>infinity.dark</em> — архивный фрагмент 001. Пространственное аудио, холодные синтезированные текстуры и плотный саб-бас. Фиксация движения вслепую сквозь искаженные частоты и закрытые двери.</p>
+          <dl class="credits">
+            <div><dt>released</dt><dd>October 2026</dd></div>
+            <div><dt>written / performed by</dt><dd>gorecz</dd></div>
+            <div><dt>length</dt><dd id="length">—</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ───────────── links (replace every # with your real URL) ───────────── -->
+      <section class="links" id="links" aria-label="Listen">
+        <h2 class="cap">listen</h2>
+        <ul class="link-list">
+          <li><a class="row" href="#"><span class="row-name">soundcloud</span><span class="row-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a></li>
+          <li><a class="row" href="#"><span class="row-name">youtube</span><span class="row-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a></li>
+          <li><a class="row" href="#"><span class="row-name">spotify</span><span class="row-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a></li>
+          <li><a class="row" href="#"><span class="row-name">telegram</span><span class="row-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a></li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="foot-mark" aria-hidden="true">gorecz</div>
+      <div class="foot-row">
+        <span>© 2026 gorecz</span>
+        <span>gorecz archive / 001</span>
+      </div>
+    </footer>
+  </div>
+  <!-- End screen: when the track ends the instruments go dark, the page falls into the ember point and an infinity sign unfolds from it (outro.js).
+       The four links sit on its shoulders. Ссылки на площадки: замени решётки # на свои реальные ссылки; пока там # — ссылка будет тусклой, с пометкой "soon". -->
+  <div id="end-screen" role="dialog" aria-modal="true" aria-label="infinity.dark has ended" aria-hidden="true" tabindex="-1" inert>
+    <canvas id="outro-cv" aria-hidden="true"></canvas>
+    <nav class="end-links" aria-label="Listen on">
+      <a href="#" class="end-link" target="_blank" rel="noopener noreferrer"><span>Spotify</span></a>
+      <a href="#" class="end-link" target="_blank" rel="noopener noreferrer"><span>Apple Music</span></a>
+      <a href="#" class="end-link" target="_blank" rel="noopener noreferrer"><span>VK Музыка</span></a>
+      <a href="#" class="end-link" target="_blank" rel="noopener noreferrer"><span>Яндекс Музыка</span></a>
+    </nav>
+    <button id="end-replay" class="end-again" type="button" aria-label="Play again"><span>again</span></button>
+    <button id="end-back" class="end-back" type="button">back to the page</button>
+    <p class="end-cap">infinity.dark · 001</p>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="engine.js"></script>
+  <script src="brain.js"></script>
+  <script src="cursor.js"></script>
+  <script src="scope.js"></script>
+  <script src="deck.js"></script>
+  <script src="outro.js"></script>
+  <script>GoreczBrain.mount(document.getElementById('brain'), function () { return window.GS; });</script>
+<script>
+document.querySelector('a[href$="#from-001"]').addEventListener('click', function (e) {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+  e.preventDefault();
+  var a = this, c = document.createElement('div');
+  c.style.cssText = 'position:fixed;inset:0;z-index:999;background:#05060a;opacity:0;transition:opacity .6s ease';
+  document.body.appendChild(c);
+  requestAnimationFrame(function () { c.style.opacity = 1; });
+  setTimeout(function () { location.href = a.href; }, 650);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>gorecz — archive</title>
+  <meta name="description" content="gorecz archive — между синтаксисом и басом." />
+  <meta name="theme-color" content="#17181a" />
+  <script>document.documentElement.classList.add('js');if(location.hash==='#from-001')document.documentElement.classList.add('arriving');setTimeout(function(){document.documentElement.classList.add('is-ready')},3000)</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500&family=Space+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="veil" aria-hidden="true"></div>
+  <div id="curtain" aria-hidden="true"></div>
+  <div id="cur" aria-hidden="true"><i class="ring"></i><i class="cdot"></i><span class="xy"></span></div>
+  <div id="term" role="dialog" aria-label="Терминал" hidden>
+    <div class="tout" id="tout"></div>
+    <label class="tin"><span>gorecz@archive:~$</span><input id="tcmd" autocomplete="off" spellcheck="false" aria-label="Команда" /></label>
+  </div>
+
+  <div class="page">
+    <header class="top">
+      <a class="brand" href="#">gorecz</a>
+      <span class="meta">archive<span id="clock"></span></span>
+      <nav aria-label="Navigation"><a href="#releases">releases</a><a href="#about">about</a></nav>
+    </header>
+
+    <main>
+      <div class="scene" id="scene">
+      <section class="hero" id="hero">
+        <div class="split" aria-hidden="true">
+          <div class="pane l"><div class="code"><div class="roll">const RELEASES = [
+  { n: '001', title: 'infinity.dark',
+    cover: 'assets/cover-001.webp',
+    href: 'infinity-dark/' },
+  { n: '002' }, { n: '003' }, { n: '004' }
+];
+
+const drawSig = (s, i, t, dt) =&gt; {
+  const on = i === active;
+  s.amp = damp(s.amp, on ? 1 : .28, 5, dt);
+  g.beginPath();
+  for (let k = 0; k &lt;= N; k++) {
+    const u = k / N;
+    const env = .25 + .75 * Math.abs(
+      Math.sin(u * 7 + s.seed));
+    y += Math.sin(k * 1.7 + t * 2.2)
+       * env * h * .42 * s.amp;
+    g.lineTo(u * w, y);
+  }
+  g.stroke();
+};
+
+setActive(+a.parentNode.dataset.i);
+leaving = performance.now();
+const RELEASES = [
+  { n: '001', title: 'infinity.dark',
+    cover: 'assets/cover-001.webp',
+    href: 'infinity-dark/' },
+  { n: '002' }, { n: '003' }, { n: '004' }
+];
+
+const drawSig = (s, i, t, dt) =&gt; {
+  const on = i === active;
+  s.amp = damp(s.amp, on ? 1 : .28, 5, dt);
+  g.beginPath();
+  for (let k = 0; k &lt;= N; k++) {
+    const u = k / N;
+    const env = .25 + .75 * Math.abs(
+      Math.sin(u * 7 + s.seed));
+    y += Math.sin(k * 1.7 + t * 2.2)
+       * env * h * .42 * s.amp;
+    g.lineTo(u * w, y);
+  }
+  g.stroke();
+};
+
+setActive(+a.parentNode.dataset.i);
+leaving = performance.now();
+const RELEASES = [
+  { n: '001', title: 'infinity.dark',
+    cover: 'assets/cover-001.webp',
+    href: 'infinity-dark/' },
+  { n: '002' }, { n: '003' }, { n: '004' }
+];
+
+const drawSig = (s, i, t, dt) =&gt; {
+  const on = i === active;
+  s.amp = damp(s.amp, on ? 1 : .28, 5, dt);
+  g.beginPath();
+  for (let k = 0; k &lt;= N; k++) {
+    const u = k / N;
+    const env = .25 + .75 * Math.abs(
+      Math.sin(u * 7 + s.seed));
+    y += Math.sin(k * 1.7 + t * 2.2)
+       * env * h * .42 * s.amp;
+    g.lineTo(u * w, y);
+  }
+  g.stroke();
+};
+
+setActive(+a.parentNode.dataset.i);
+leaving = performance.now();
+const RELEASES = [
+  { n: '001', title: 'infinity.dark',
+    cover: 'assets/cover-001.webp',
+    href: 'infinity-dark/' },
+  { n: '002' }, { n: '003' }, { n: '004' }
+];
+
+const drawSig = (s, i, t, dt) =&gt; {
+  const on = i === active;
+  s.amp = damp(s.amp, on ? 1 : .28, 5, dt);
+  g.beginPath();
+  for (let k = 0; k &lt;= N; k++) {
+    const u = k / N;
+    const env = .25 + .75 * Math.abs(
+      Math.sin(u * 7 + s.seed));
+    y += Math.sin(k * 1.7 + t * 2.2)
+       * env * h * .42 * s.amp;
+    g.lineTo(u * w, y);
+  }
+  g.stroke();
+};
+
+setActive(+a.parentNode.dataset.i);
+leaving = performance.now();
+</div></div></div>
+          <div class="pane r"><canvas id="ridge"></canvas></div>
+          <i class="cut"></i><span class="lab ll">синтаксис</span><span class="lab rr">бас</span>
+        </div>
+        <div class="hero-text" id="htext">
+          <h1 class="wordmark" aria-label="gorecz archive">gorecz archive<i class="dot" aria-hidden="true"></i></h1>
+        <p class="sub">между синтаксисом и басом</p>
+        </div>
+      </section>
+      </div>
+
+      <section class="index" id="releases" aria-label="Releases">
+        <h2 class="cap"><span>releases</span><span id="count"></span></h2>
+        <ol class="idx" id="idx"></ol>
+      </section>
+
+      <section class="about" id="about">
+        <h2 class="cap"><span>about</span><span>README.md</span></h2>
+        <div class="txt">
+          <p class="lead">Gorecz Archive — пространство, в котором встречаются две мои основные сферы интересов: музыка и разработка. Здесь я собираю то, что создаю, изучаю и постепенно превращаю в законченные проекты — от музыкальных экспериментов и визуальных работ до сайтов и интерактивных идей.</p>
+          <div class="side">
+            <p>Мне интересно находить связь между кодом и звуком. В разработке я ценю структуру, точность и возможность создавать работающие вещи с нуля. В музыке — эмоцию, атмосферу и возможность передавать то, что сложно выразить словами. Этот архив объединяет оба направления и показывает процесс движения между ними.</p>
+            <p>Gorecz Archive постоянно меняется вместе со мной. Здесь не обязательно всё должно быть идеально или закончено — важнее сохранять идеи, эксперименты и результаты, которые имеют для меня значение.</p>
+          </div>
+        </div>
+        <div class="figs">
+          <figure class="f1"><div class="panel"><pre class="json" id="data"></pre></div><figcaption>fig. 1 / синтаксис</figcaption></figure>
+          <figure class="f2"><div class="panel"><canvas id="meters" aria-label="Уровни сигнала по релизам"></canvas></div><figcaption>fig. 2 / бас</figcaption></figure>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span>© 2026 gorecz</span>
+      <span class="links"><a href="#">telegram</a><a href="#">instagram</a><a href="#">soundcloud</a><a href="#">github</a></span>
+      <button type="button" id="endbtn" aria-label="Открыть терминал">end of archive ~</button>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

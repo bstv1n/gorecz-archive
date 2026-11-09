@@ -1,0 +1,147 @@
+/* gorecz — archive · the "code" side: structure, grid, signal.
+   Track sites are the "sound" side and each looks different. Shared on purpose: the ember dot,
+   the 001… numbering, the wordmark and the exit transition into a track (curtain = night). */
+:root {
+  color-scheme: dark;
+  --base: #17181a; --ink: #d9d9d4; --ash: #a2a39d; --dim: #7c7d77;
+  --line: rgba(217, 217, 212, .14); --ember: #b3324f; --night: #05060a;
+  --ui: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "Space Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --pad: clamp(20px, 3.4vw, 52px);
+  --ease: cubic-bezier(.2, .7, .1, 1);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; background: var(--base); }
+body { min-height: 100vh; background: var(--base); color: var(--ink); font: 400 16px/1.6 var(--ui); -webkit-font-smoothing: antialiased; overflow-x: clip; }
+a { color: inherit; text-decoration: none; }
+ol { list-style: none; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+::selection { background: var(--ember); color: #fff; }
+
+/* grid paper */
+body::before {
+  --gm: radial-gradient(ellipse 90% 80% at 50% 40%, #000 30%, transparent 100%);
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .55;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 96px 96px; -webkit-mask-image: var(--gm); mask-image: var(--gm);
+}
+.page { position: relative; z-index: 2; }
+#veil {
+  --m: radial-gradient(circle var(--r, 0px) at var(--x, 50%) var(--y, 50%), #000 0, rgba(0, 0, 0, .55) 45%, transparent 100%);
+  position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0;
+  background: center 38% / cover no-repeat; mix-blend-mode: lighten; filter: brightness(1.8); -webkit-mask-image: var(--m); mask-image: var(--m);
+}
+#curtain { position: fixed; inset: 0; z-index: 60; background: var(--night); opacity: 0; pointer-events: none; transition: opacity .6s ease; }
+.leaving #curtain { opacity: 1; }
+.arriving #curtain { opacity: 1; transition: none; }
+
+.top { position: fixed; top: 0; left: 0; right: 0; z-index: 5; background: linear-gradient(rgba(23, 24, 26, .9), rgba(23, 24, 26, 0)); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: max(22px, env(safe-area-inset-top)) var(--pad) 22px; font: 400 12px var(--mono); }
+.brand { color: var(--ink); }
+.meta { color: var(--dim); }
+#clock { margin-left: 12px; color: var(--ash); }
+.top nav { justify-self: end; display: flex; gap: 24px; color: var(--ash); }
+.top nav a:hover { color: var(--ink); }
+
+.hero { --d: 50%; touch-action: pan-y; position: sticky; top: 0; isolation: isolate; height: 100svh; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 var(--pad) clamp(28px, 6vh, 64px); }
+.wordmark { font-weight: 500; font-size: clamp(44px, 11vw, 190px); line-height: .92; letter-spacing: -.055em; }
+.dot { display: inline-block; width: .14em; height: .14em; margin-left: .06em; border-radius: 50%; background: var(--ember); }
+.sub { margin-top: 18px; font: 400 13px var(--mono); color: var(--ash); }
+.scene { position: relative; height: 190svh; }
+.hero-text { transform-origin: left bottom; will-change: transform, opacity; }
+.wordmark .wc { display: inline-block; text-align: center; }
+.js .hero .sub { opacity: 0; transform: translateY(14px); }
+.is-ready .hero .sub { opacity: 1; transform: none; transition: opacity 1.4s var(--ease) 2s, transform 1.4s var(--ease) 2s; }
+
+/* two worlds: code | sound, the cut follows the cursor */
+.split { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.pane { position: absolute; inset: 0; --m: linear-gradient(#000 50%, transparent 100%); -webkit-mask-image: var(--m); mask-image: var(--m); }
+.pane.l { clip-path: inset(0 calc(100% - var(--d)) 0 0); }
+.pane.r { clip-path: inset(0 0 0 var(--d)); }
+/* the code hugs the cut: right-aligned to it, so it always sits where syntax turns into bass */
+.code { position: absolute; inset: 0 auto 0 0; width: var(--d); overflow: hidden; padding: calc(var(--pad) + 90px) 18px var(--pad) 0; font: 400 clamp(12px, .95vw, 16px) / 1.75 var(--mono); color: var(--ink); white-space: pre; text-align: right; tab-size: 2; }
+.ln { opacity: .3; transform-origin: 100% 50%; }
+.roll { will-change: transform; }
+#ridge { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cut { transform-origin: top; position: absolute; left: var(--d); top: 0; bottom: 0; width: 1px; background: rgba(217, 217, 212, .55); }
+.lab { position: absolute; top: 84px; left: var(--d); font: 400 12px var(--mono); color: var(--ash); }
+.ll { transform: translateX(calc(-100% - 12px)); }
+.rr { transform: translateX(12px); }
+
+.cap { display: flex; justify-content: space-between; margin-bottom: 20px; font: 400 12px var(--mono); color: var(--dim); }
+.index { padding: clamp(70px, 14vh, 150px) var(--pad) 60px; }
+.idx { border-top: 1px solid var(--ink); }
+.idx li { border-bottom: 1px solid var(--line); transition: opacity .4s ease; }
+.idx.dim li:not(.on) { opacity: .35; }
+.row { display: grid; grid-template-columns: clamp(44px, 5vw, 72px) minmax(0, 1fr) minmax(0, 1.1fr); align-items: center; column-gap: clamp(16px, 3vw, 48px); padding: clamp(16px, 2.4vw, 28px) 0; }
+.n { font: 400 12px var(--mono); color: var(--dim); }
+.t { display: block; font-weight: 500; font-size: clamp(30px, 4.6vw, 76px); line-height: 1; letter-spacing: -.04em; }
+.t.off { font-weight: 400; color: var(--dim); }
+.m { display: block; margin-top: 10px; font: 400 12px/1.5 var(--mono); color: var(--ash); }
+.sig { display: block; width: 100%; height: clamp(44px, 6vw, 84px); }
+.lock .row { cursor: default; }
+.js .row { opacity: 0; transform: translateY(28px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
+.js .row.in { opacity: 1; transform: none; }
+
+/* instrument cursor (the real cursor stays) */
+#cur { position: fixed; left: 0; top: 0; z-index: 70; pointer-events: none; opacity: 0; transition: opacity .3s; }
+#cur.on { opacity: 1; }
+.ring { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border: 1px solid rgba(217, 217, 212, .55); border-radius: 50%; transition: width .25s var(--ease), height .25s var(--ease), left .25s var(--ease), top .25s var(--ease), border-color .25s; }
+.cdot { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--ember); }
+.xy { position: absolute; left: 22px; top: 12px; font: 400 11px var(--mono); color: var(--ash); white-space: nowrap; }
+#cur.open .ring { left: -32px; top: -32px; width: 64px; height: 64px; border-color: var(--ember); }
+#cur.lock .ring { border-style: dashed; }
+@media (hover: none) {
+  #cur { display: none; }
+  .sub::after { content: "проведи пальцем по экрану"; display: block; margin-top: 6px; color: var(--dim); }
+  .top nav a, .links a, #endbtn { padding: 10px 4px; }
+}
+a { -webkit-tap-highlight-color: transparent; }
+.has-cur, .has-cur * { cursor: none; }
+.native, .native * { cursor: auto; }
+.native #cur { display: none; }
+
+/* terminal */
+#term { position: fixed; left: var(--pad); bottom: var(--pad); z-index: 80; width: min(760px, calc(100% - var(--pad) * 2)); padding: 16px 18px; background: rgba(23, 24, 26, .96); border: 1px solid var(--ink); font: 400 13px / 1.7 var(--mono); color: var(--ink); }
+.tout { max-height: 40vh; overflow: auto; white-space: pre-wrap; color: var(--ash); }
+.tout .c { color: var(--ink); }
+.tin { display: flex; gap: 10px; margin-top: 8px; }
+.tin input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--ink); font: inherit; caret-color: var(--ember); }
+#endbtn { padding: 0; background: none; border: 0; color: inherit; font: inherit; cursor: pointer; }
+#endbtn:hover { color: var(--ink); }
+
+.about { padding: clamp(70px, 12vh, 130px) var(--pad); }
+.txt { display: grid; grid-template-columns: repeat(12, 1fr); gap: 0 clamp(16px, 2vw, 32px); align-items: start; padding-top: clamp(24px, 4vw, 56px); border-top: 1px solid var(--ink); }
+.lead { grid-column: 1 / 8; font-size: clamp(26px, 3.4vw, 64px); line-height: 1.18; letter-spacing: -.035em; }
+.side { grid-column: 9 / 13; padding-left: clamp(16px, 2vw, 32px); border-left: 1px solid var(--line); }
+.side p { max-width: 46ch; font-size: clamp(14px, 1vw, 18px); line-height: 1.75; color: var(--ash); }
+.side p + p { margin-top: 1.4em; }
+.figs { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px clamp(16px, 2vw, 32px); margin-top: clamp(48px, 8vw, 120px); }
+.f1 { grid-column: 1 / 5; }
+.f2 { grid-column: 5 / 9; }
+.figs figure { display: flex; flex-direction: column; gap: 10px; }
+.panel { height: clamp(200px, 20vw, 340px); padding: clamp(14px, 1.6vw, 24px); border: 1px solid var(--line); overflow: hidden; }
+.json { font: 400 clamp(11px, .95vw, 15px) / 1.8 var(--mono); color: var(--ash); white-space: pre; }
+.json .on { color: var(--ink); }
+.json .off { color: var(--dim); }
+#meters { display: block; width: 100%; height: 100%; }
+.figs figcaption { font: 400 12px var(--mono); color: var(--dim); }
+
+.foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; padding: 28px var(--pad) 36px; border-top: 1px solid var(--line); font: 400 12px var(--mono); color: var(--dim); }
+.links { display: flex; gap: 20px; }
+.links a:hover { color: var(--ink); }
+
+@media (max-width: 820px) {
+  .lead, .side { grid-column: 1 / -1; }
+  .side { margin-top: 28px; padding-left: 0; border-left: 0; }
+  .f1, .f2 { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .row { grid-template-columns: 34px 1fr; }
+  .sig { grid-column: 2; margin-top: 12px; height: 48px; }
+  .top { grid-template-columns: 1fr auto; }
+  .meta { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+  .js .hero > * { opacity: 1; transform: none; }
+}
