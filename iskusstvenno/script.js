@@ -463,19 +463,13 @@
   uniform float uProg;
   uniform float uScroll;
   uniform float uDim;
-  uniform vec4  uFx;    // x: echo, y: space, z: flange, w: chorus
+  uniform vec4  uFx;
   uniform vec2  uLfo;
 
   float hash(vec2 p) {
     vec3 p3 = fract(vec3(p.xyx) * 0.1031);
     p3 += dot(p3, p3.yzx + 33.33);
     return fract((p3.x + p3.y) * p3.z);
-  }
-
-  vec2 hash2(vec2 p) {
-    vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.xx + p3.yz) * p3.zy);
   }
 
   float noise(vec2 p) {
@@ -490,7 +484,7 @@
     float v = 0.0;
     float a = 0.5;
     mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
       v += a * noise(p);
       p = m * p;
       a *= 0.5;
@@ -498,171 +492,110 @@
     return v;
   }
 
-  // Физический слой стекающих капель и мокрых следов на стекле
-  // Возвращает vec3(смещение нормали X, смещение нормали Y, маска капли/следа)
-  vec3 dropletLayer(vec2 uv, float scale, float speed, float t) {
-    vec2 aspect = vec2(2.2, 1.0);
-    vec2 st = uv * scale * aspect;
-    vec2 id = floor(st);
-    st.y += t * speed * (0.65 + 0.7 * hash(vec2(id.x, 0.0)));
-    id = floor(st);
-    vec2 f = fract(st) - 0.5;
-
-    vec2 rnd = hash2(id);
-    // Капля рывками скользит вниз под силой тяжести и поверхностного натяжения
-    float slidePhase = t * (1.2 + rnd.x * 1.5) + rnd.y * 6.283;
-    float wiggle = sin(slidePhase + sin(slidePhase * 2.0) * 0.7) * 0.42;
-    float dropX = (rnd.x - 0.5) * 0.55 + sin(uv.y * 16.0 + rnd.y * 10.0) * 0.08;
-    float dropY = wiggle * 0.65;
-
-    vec2 dropPos = vec2(dropX, dropY);
-    vec2 diff = (f - dropPos) / aspect;
-    float d = length(diff);
-
-    // Размер капли (не в каждой ячейке есть крупная капля)
-    float radius = (0.09 + 0.07 * rnd.y) * step(0.28, rnd.x);
-    float drop = smoothstep(radius, radius * 0.15, d);
-
-    // Мокрый след (хвост) выше сползающей капли
-    float trailX = smoothstep(radius * 0.75, 0.0, abs(f.x - dropX));
-    float trailY = smoothstep(-0.02, 0.45, f.y - dropY) * smoothstep(0.5, dropY, f.y);
-    float trail = trailX * trailY * step(0.28, rnd.x);
-
-    // Мелкие неподвижные брызги конденсата вокруг следа
-    float beads = smoothstep(0.035, 0.005, length(f - vec2(dropX, fract(f.y * 3.0) - 0.5) * 0.5)) * trailY * 0.6;
-
-    float mask = clamp(drop + trail * 0.45 + beads, 0.0, 1.0);
-    // Вектор 3D-преломления внутри линзы капли
-    vec2 normal = -diff * (drop * 6.5 + beads * 3.0) + vec2(f.x - dropX, 0.0) * trail * 2.0;
-    return vec3(normal, mask);
-  }
-
   void main() {
     vec2 uv = gl_FragCoord.xy / uRes;
     float asp = uRes.x / uRes.y;
     vec2 p = (uv - 0.5) * vec2(asp, 1.0);
 
-    // 1. ФИЗИКА ТЯЖЕЛОЙ ВОЛНЫ, ВРЕЗАЮЩЕЙСЯ В СТЕКЛО (Wave Slam & Slosh)
-    float waveTime = uTime * 1.15;
-    // Линия гребня волны, которая качается, поднимается на басу и бьет в объектив
-    float swellHeight = -0.08 + 0.18 * sin(waveTime * 0.8 + p.x * 1.4)
-                      + 0.09 * cos(waveTime * 1.7 - p.x * 2.8)
-                      + uBass * 0.26;
-    float waveNoise = (fbm(vec2(p.x * 2.6 - waveTime * 0.4, p.y * 2.0 + waveTime * 0.3)) - 0.5) * 0.18;
-    float waveDist = p.y - (swellHeight + waveNoise);
+    // 1. ЦИКЛ ТЯЖЕЛОЙ ВОЛНЫ, БЬЮЩЕЙСЯ В СТЕКЛЯННЫЙ БОКС (резкий удар -> медленный откат вниз)
+    float cycle = uTime * 0.16;
+    float phase = fract(cycle);
+    float waveId = floor(cycle);
 
-    // Ударная волна (Impact Ripple), расходящаяся по стеклу при ударах баса и гребня
-    float crestMask = exp(-abs(waveDist) * 9.5);
-    float submergedMask = smoothstep(0.08, -0.12, waveDist); // 1.0 под волной, 0.0 над гребнем
-    float impactShock = sin(waveDist * 38.0 - uTime * 9.0) * crestMask * (0.022 + 0.045 * uBass);
+    // Быстрый взлет волны при ударе о стекло (0..0.18) и долгое стекание вниз (0.18..1.0)
+    float surge = pow(smoothstep(0.0, 0.18, phase), 0.5) * (1.0 - smoothstep(0.18, 1.0, phase));
+    float phase2 = fract(cycle + 0.5);
+    float surge2 = pow(smoothstep(0.0, 0.22, phase2), 0.7) * (1.0 - smoothstep(0.22, 1.0, phase2)) * 0.5;
 
-    // 2. КАПЛИ И РУЧЕЙКИ ВОДЫ ПРЯМО НА СТЕКЛЕ ЭКРАНА
-    float dropSpeed = 0.22 + uBass * 0.25;
-    vec3 drops1 = dropletLayer(uv, 5.5, dropSpeed, uTime);
-    vec3 drops2 = dropletLayer(uv + vec2(0.37, 0.61), 9.5, dropSpeed * 0.7, uTime * 0.85);
-    vec2 dropNormal = drops1.xy + drops2.xy * 0.65;
-    float dropMask = clamp(drops1.z + drops2.z * 0.7, 0.0, 1.0);
+    float totalSurge = max(surge, surge2) + uBass * 0.28;
 
-    // Стирание/раздвигание воды на стекле курсором мыши
+    // Неровный гребень волны во всю ширину экрана
+    float slant = p.x * (0.15 * sin(waveId * 2.1));
+    float warp = fbm(vec2(p.x * 2.0 + uTime * 0.25, p.y * 1.5 - uTime * 0.4)) * 0.26;
+    float waveLine = -0.45 + totalSurge * 0.88 + slant + warp;
+
+    float dWave = p.y - waveLine;
+    float underWater = smoothstep(0.025, -0.05, dWave);
+
+    // 2. СТЕКАЮЩАЯ ПЕЛЕНА ВОДЫ ПО СТЕКЛУ ПОСЛЕ ОТКАТА ВОЛНЫ
+    float runoffReach = waveLine + (1.0 - phase) * 0.46;
+    float sheetFinger = fbm(vec2(p.x * 7.0, p.y * 2.2 + uTime * 0.55)) * 0.15;
+    float wetSheet = smoothstep(0.07, -0.07, p.y - (runoffReach + sheetFinger)) * (1.0 - underWater);
+
+    float sheetFlow = fbm(vec2(p.x * 4.5, p.y * 3.8 + uTime * 0.85));
+    vec2 glassNormal = vec2(
+      noise(vec2(p.x * 12.0 + 0.02, p.y * 6.0 + uTime)) - noise(vec2(p.x * 12.0 - 0.02, p.y * 6.0 + uTime)),
+      noise(vec2(p.x * 8.0, p.y * 12.0 + 0.02 + uTime * 1.4)) - 0.5
+    );
+
+    float slamImpact = exp(-pow((phase - 0.16) * 9.0, 2.0)) + uBass * 0.7;
+    float crestBand = exp(-abs(dWave) * 12.0);
+
+    // Преломление сквозь толщу волны и стекающую воду
+    vec2 refractedP = p;
+    refractedP += glassNormal * wetSheet * 0.05;
+    refractedP.x += sin(p.y * 26.0 + uTime * 4.0) * underWater * (0.015 + 0.022 * uBass);
+    refractedP.y -= crestBand * (0.06 + 0.04 * slamImpact);
+
     vec2 m = (uMouse - 0.5) * vec2(asp, 1.0);
     float md = length(p - m);
-    vec2 mouseWave = normalize(p - m + 0.0001) * sin(md * 34.0 - uTime * 7.0) * exp(-md * 4.2) * 0.018;
+    refractedP += normalize(p - m + 0.001) * sin(md * 28.0 - uTime * 5.0) * exp(-md * 4.5) * 0.015;
 
-    // Итоговое преломление координат сквозь мокрое стекло, капли и удар волны
-    vec2 refractedP = p
-                    + dropNormal * 0.14
-                    + vec2(impactShock * 1.6, impactShock)
-                    + mouseWave;
+    // 3. ГЛУБОКИЙ ТЕМНЫЙ ФОН ЗА СТЕКЛОМ (Высокий контраст без голубого мыла)
+    float t = uTime * mix(0.03, 0.008, uFx.w);
+    vec2 q = vec2(fbm(refractedP * 1.4 + vec2(t, 0.0)), fbm(refractedP * 1.4 - vec2(0.0, t)));
+    float mist = fbm(refractedP * 1.8 + 1.8 * q);
 
-    // Дополнительный горизонтальный водный смаз в нижней затопленной части стекла
-    float underWaterStreak = (noise(vec2(refractedP.x * 2.0 + uTime * 0.3, refractedP.y * 75.0)) - 0.5)
-                           * (0.015 + 0.025 * uBass) * (0.4 + 0.6 * submergedMask);
-    refractedP.x += underWaterStreak;
+    vec3 deepAbyss  = vec3(0.010, 0.018, 0.032);
+    vec3 coldSteel  = vec3(0.045, 0.105, 0.165);
+    vec3 skyHorizon = vec3(0.300, 0.435, 0.540);
+    vec3 sparkCyan  = vec3(0.550, 0.880, 1.000);
 
-    // ECHO и CHORUS из микшера
-    float distVinyl = length(refractedP - vec2(0.24, 0.06));
-    float ripple = sin(distVinyl * 40.0 - uTime * 6.0);
-    refractedP += normalize(refractedP - vec2(0.24, 0.06) + 0.001) * ripple * exp(-distVinyl * 3.0) * uFx.x * 0.035;
+    float skyGrad = smoothstep(-0.3, 1.05, uv.y + q.y * 0.15);
+    vec3 col = mix(deepAbyss, coldSteel, skyGrad);
+    col += skyHorizon * pow(clamp(uv.y, 0.0, 1.0), 2.2) * (0.32 + 0.45 * mist) * (0.6 + 0.4 * uLevel);
 
-    float t = uTime * mix(0.04, 0.01, uFx.w);
-    vec2 swirl = vec2(noise(refractedP * 2.0 + vec2(t, 0.0)), noise(refractedP * 2.0 - vec2(0.0, t))) - 0.5;
-    refractedP += swirl * uFx.w * 0.35;
-
-    // 3. ГЛУБОКОВОДНАЯ СЦЕНА И КАУСТИКА ЗА СТЕКЛОМ
-    vec2 wp = vec2(refractedP.x * 0.7, refractedP.y * 2.2 - uScroll * 0.25);
-    vec2 q = vec2(fbm(wp * 1.5 + vec2(t * 1.3, 0.0)),
-                  fbm(wp * 1.5 + vec2(4.1, 2.3) - t));
-    float water = fbm(wp * 1.7 + 2.0 * q);
-
-    vec3 abyss     = vec3(0.010, 0.028, 0.060); // #03070F
-    vec3 midWater  = vec3(0.075, 0.188, 0.285); // #133049
-    vec3 topMist   = vec3(0.450, 0.610, 0.725); // #739BB9
-    vec3 sparkCyan = vec3(0.620, 0.910, 1.000); // #9EE8FF
-    vec3 foamWhite = vec3(0.880, 0.960, 1.000);
-
-    float depthGrad = smoothstep(-0.2, 1.05, uv.y);
-    vec3 col = mix(abyss, midWater, pow(depthGrad, 0.85));
-    col = mix(col, topMist, pow(clamp(uv.y, 0.0, 1.0), 1.5) * (0.42 + 0.45 * water));
-
-    // Подводная толща под линией волны чуть плотнее и глубже по тону
-    col = mix(col, col * vec3(0.78, 0.92, 1.08), submergedMask * 0.45);
-
-    // 4. ПРОВОДА И ИСКРЫ ЗА МОКРЫМ СТЕКЛОМ (преломляются внутри капель!)
+    // 4. СПЛОШНЫЕ ПОДВОДНЫЕ ТРОСЫ ВО ВСЮ ШИРИНУ ЭКРАНА ЗА СТЕКЛОМ
     for (int i = 0; i < 3; i++) {
       float fi = float(i);
-      float curveY = 0.16 - fi * 0.22
-                   + sin(refractedP.x * (1.5 + fi * 0.4) + uTime * 0.55 + fi * 2.0) * 0.08
-                   + cos(refractedP.x * 3.1 - uTime * 0.35) * 0.025;
-      float dWire = abs(refractedP.y - curveY);
+      float yWire = 0.20 - fi * 0.19 + sin(refractedP.x * 1.3 + fi * 1.8 + uTime * 0.35) * 0.06;
+      float dW = abs(refractedP.y - yWire);
+      float blurW = 0.010 + wetSheet * 0.016 + underWater * 0.022;
+      float wMask = smoothstep(blurW, 0.002, dW);
+      col = mix(col, deepAbyss * 0.35, wMask * 0.8);
 
-      float wireBody = smoothstep(0.014, 0.003, dWire);
-      col = mix(col, abyss * 0.45, wireBody * 0.7);
-
-      float wireRim = smoothstep(0.006, 0.001, abs(dWire - 0.004));
-      col += topMist * wireRim * 0.22;
-
-      float pulsePos = fract(refractedP.x * 0.45 - uTime * (0.42 + fi * 0.18) + fi * 0.37);
-      float sparkMask = smoothstep(0.15, 0.0, abs(pulsePos - 0.5)) * (0.35 + 1.5 * uBass + 0.6 * uHigh);
-      float crackle = step(0.42, noise(vec2(refractedP.x * 28.0 + uTime * 15.0, fi * 10.0)));
-      float glow = exp(-dWire * 40.0) * sparkMask * (0.6 + 0.85 * crackle);
-      col += sparkCyan * glow * 0.9;
+      float pulse = smoothstep(0.18, 0.0, abs(fract(refractedP.x * 0.35 - uTime * (0.35 + fi * 0.12) + fi * 0.4) - 0.5));
+      col += sparkCyan * exp(-dW * (30.0 - wetSheet * 12.0)) * pulse * (0.25 + 1.2 * uBass) * 0.7;
     }
 
-    // 5. ПЕНА И БРЫЗГИ НА ГРЕБНЕ ВОЛНЫ, ВРЕЗАЮЩЕЙСЯ В СТЕКЛО
-    float foamPattern = fbm(vec2(p.x * 9.0 + uTime * 1.2, p.y * 9.0 - uTime * 0.8));
-    float crestFoam = crestMask * smoothstep(0.32, 0.72, foamPattern + uBass * 0.35);
-    col += mix(sparkCyan, foamWhite, 0.6) * crestFoam * (0.42 + 0.55 * uBass);
+    // 5. ТЕЛО ВОЛНЫ И ПЕНА ПРИБОЯ НА СТЕКЛЕ
+    vec3 waveBodyColor = vec3(0.020, 0.070, 0.125) + skyHorizon * mist * 0.14;
+    col = mix(col, waveBodyColor, underWater * 0.62);
 
-    // 6. 3D-ОСВЕЩЕНИЕ САМИХ КАПЕЛЬ НА СТЕКЛЕ (Блики и собственные тени капель)
-    vec2 lightDir = normalize(vec2(-0.4, 0.75));
-    float dropSpec = clamp(dot(normalize(vec3(dropNormal * 3.5, 1.0)), normalize(vec3(lightDir, 0.65))), 0.0, 1.0);
-    float dropRimShadow = clamp(dot(dropNormal, lightDir), 0.0, 1.0);
+    float foamTurb = fbm(vec2(p.x * 6.5 + warp * 3.0, p.y * 7.5 + uTime * 0.9));
+    float foamDetail = fbm(vec2(p.x * 18.0 - uTime * 0.6, p.y * 18.0 + uTime * 1.5));
 
-    // Тень под нижней кромкой капли + яркий холодный блик сверху капли
-    col *= 1.0 - dropRimShadow * dropMask * 0.35;
-    col += foamWhite * pow(dropSpec, 10.0) * dropMask * 0.75;
-    col += sparkCyan * dropMask * 0.08;
+    float crestFoam = crestBand * smoothstep(0.28, 0.68, foamTurb + slamImpact * 0.28);
+    float trailingLace = underWater * exp(dWave * 4.8) * smoothstep(0.46, 0.74, foamTurb * 0.6 + foamDetail * 0.5);
+    float sheetMeniscus = smoothstep(0.035, 0.0, abs(p.y - (runoffReach + sheetFinger))) * (0.35 + 0.4 * sheetFlow);
 
-    // FLANGE: ледяной блеск
-    float metallic = smoothstep(0.44, 0.5, water) * smoothstep(0.56, 0.5, water);
-    col += sparkCyan * metallic * uFx.z * 1.2 * (0.4 + uLevel);
+    vec3 foamCol = vec3(0.84, 0.94, 1.0);
+    col += foamCol * crestFoam * (0.55 + 0.35 * slamImpact);
+    col += foamCol * trailingLace * 0.35;
+    col += sparkCyan * sheetMeniscus * 0.25;
 
-    // Ореол вокруг ледяной глыбы деки и курсора
-    float halo = exp(-distVinyl * 2.3);
-    col += vec3(0.22, 0.48, 0.68) * water * halo * 0.32;
-    col += sparkCyan * exp(-md * md * 12.0) * 0.16;
+    col += skyHorizon * wetSheet * pow(sheetFlow, 3.0) * 0.15;
 
-    // Виньетка обледеневших краев экрана и зерно
-    float frostEdge = smoothstep(0.45, 1.35, length(p * vec2(0.78, 1.02)));
-    col = mix(col, col * 0.55 + vec3(0.05, 0.12, 0.20) * water, frostEdge * 0.65);
+    col *= 1.0 - smoothstep(0.35, 1.55, length(p * vec2(0.82, 1.05)));
     col *= uDim;
-    col += (hash(gl_FragCoord.xy + fract(uTime) * 91.0) - 0.5) * (2.0 / 255.0);
+    col += (hash(gl_FragCoord.xy + fract(uTime) * 91.0) - 0.5) * (2.2 / 255.0);
 
     gl_FragColor = vec4(col, 1.0);
   }`;
 
   const fog = (() => {
     const canvas = $('#fog');
+    if (document.getElementById('bgv')) { canvas.style.display = 'none'; return null; }
     let gl = null;
     try {
       gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' }) ||
@@ -1125,6 +1058,7 @@
     // scroll-linked bits
     if (scrollDirty) { scrollDirty = false; updateReveal(); }
     dim = 1 - 0.5 * smooth(0.15, 0.95, scrollY / innerHeight);
+    document.documentElement.style.setProperty('--dim', dim.toFixed(3));
 
     // fog (and a quiet check that the GPU keeps up: after ~2 s of frames, lower the resolution if not)
     if (fog) {

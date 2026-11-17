@@ -5,9 +5,9 @@
    Over file:// browsers hand Web Audio silence, so there only volume works (audio.volume). */
 (() => {
   const audio = document.getElementById('audio'), $ = (s) => document.querySelector(s);
-  const G = window.GFX = { fx: [0, 0, 0, 0], lfo: [0, 0] };      // read by the fog shader
-  const LFO = [.25, .8], K = [.7, 1.1, .8, .8];                  // lfo Hz (flanger, chorus), wet level per effect
-  let ctx, master, muffle = null, pan = null, wet = [], t0 = 0;
+  const G = window.GFX = { fx: [0, 0, 0, 0], lfo: [0, 0], depth: 0 };      // read by the fog shader
+  const LFO = [.35, .29], K = [1.7, 0, 1.0, 2.2];                    // lfo Hz (tape wobble of the echo), wet level per effect, measured with noise so that at full slider the echo sits about -5 dB, the crush about -6 dB and the bloom about -5 dB under the dry sound (slot 1 is not a send: it is the water filter)
+  let ctx, master, muffle = null, pan = null, uw = null, wet = [], hooks = [], t0 = 0;
   const amt = [0, 0, 0, 0], vol = $('#vol'), mix = $('#mix');
   const paint = (el) => el.style.setProperty('--v', (el.value * 100) + '%');
 
@@ -26,12 +26,45 @@
     if (pan) pan.pan.setTargetAtTime(sp.on ? sp.pan * 0.35 : 0, t, jump ? 0.001 : 0.1);
     muffle.frequency.setTargetAtTime(sp.on && sp.hidden ? 600 : 24000, t, jump ? 0.001 : 0.2);
   };
+  G.debug = () => ({ built: !!ctx, uwHz: uw ? Math.round(uw.frequency.value) : null, amt: amt.slice(), depth: G.depth });
   G.spatial = {
     set(on) { sp.on = !!on; applySpace(); },
     pan(x) { sp.pan = Math.max(-1, Math.min(1, +x || 0)); applySpace(); },
     hidden(h) { sp.hidden = !!h; applySpace(); },
     get on() { return sp.on; },
   };
+
+
+  /* The four effects of the world «искусственно». Each one is a sound AND a place in the picture (grade.js reads GFX.fx):
+     0 эхо в тумане    ping-pong delay, every repeat darker and softer, the delay wobbles like tape          → ghost copy of the picture
+     1 под водой       not a send but the water filter: the sound sinks (see depth below)                    → the water rises on the glass
+     2 обрыв сигнала   radio band + 3-bit crush + random dropouts + wire crackle                              → rows tear sideways, colour splits, black bands
+     3 восстановление  a reversed-envelope reverb: the sound blooms after the note, as if being put back together → the picture clears, a cold glow */
+  function makeFx(ctx, src, amt) {
+    amt = amt || [0, 0, 0, 0];
+    const g = (v) => { const n = ctx.createGain(); n.gain.value = v; return n; }, f = (type, hz) => { const n = ctx.createBiquadFilter(); n.type = type; n.frequency.value = hz; return n; };
+    const lfo = (hz, depth, target) => { const o = ctx.createOscillator(); o.frequency.value = hz; o.connect(g(depth)).connect(target); o.start(); };
+    const noise = (len, fn) => { const b = ctx.createBuffer(2, len, ctx.sampleRate); for (let c = 0; c < 2; c++) { const a = b.getChannelData(c); for (let i = 0; i < len; i++) a[i] = fn(i / len); } return b; };
+    const wet = [], hooks = [];
+    { const inp = g(1), hp = f('highpass', 220), dL = ctx.createDelay(2), dR = ctx.createDelay(2), fL = f('lowpass', 1900), fR = f('lowpass', 1900), fb = g(.48), m = ctx.createChannelMerger(2);
+      fL.Q.value = fR.Q.value = .5; inp.channelCount = 1; inp.channelCountMode = 'explicit'; dL.delayTime.value = dR.delayTime.value = .43;
+      src.connect(inp); inp.connect(hp); hp.connect(dL); dL.connect(fL); fL.connect(dR); dR.connect(fR); fR.connect(fb); fb.connect(dL);       // L → R → L …, each pass through a lowpass
+      lfo(LFO[0], .0025, dL.delayTime); lfo(LFO[1], .0025, dR.delayTime);
+      fL.connect(m, 0, 0); fR.connect(m, 0, 1); wet[0] = g(0); m.connect(wet[0]); }
+    wet[1] = g(0);
+    { const hp = f('highpass', 380), lp = f('lowpass', 3600), sh = ctx.createWaveShaper(), gate = g(1), crack = g(0), N = 1024, curve = new Float32Array(N);
+      for (let i = 0; i < N; i++) curve[i] = Math.round((i * 2 / (N - 1) - 1) * 7.5) / 7.5;                                                      // 16 levels: a 4-bit crush
+      sh.curve = curve; src.connect(sh); sh.connect(hp); hp.connect(lp); lp.connect(gate); wet[2] = g(0); gate.connect(wet[2]);       // crush first, then squeeze it through the radio band: no harsh fizz
+      const cs = ctx.createBufferSource(), chp = f('highpass', 1500); cs.buffer = noise(ctx.sampleRate * 2, () => (Math.random() < .0015 ? Math.random() * 2 - 1 : 0)); cs.loop = true; cs.start(); cs.connect(chp); chp.connect(crack); crack.connect(wet[2]);
+      hooks[2] = (a) => { crack.gain.value = a * .5; };
+      if (typeof OfflineAudioContext === 'undefined' || !(ctx instanceof OfflineAudioContext)) setInterval(() => {                               // the signal drops out for a moment
+        if (amt[2] > .02 && Math.random() < amt[2] * .5) { const t = ctx.currentTime; gate.gain.cancelScheduledValues(t); gate.gain.setValueAtTime(gate.gain.value, t); gate.gain.linearRampToValueAtTime(0, t + .01); gate.gain.linearRampToValueAtTime(1, t + .05 + Math.random() * .2); }
+      }, 160); }
+    { const cv = ctx.createConvolver(), hp = f('highpass', 300); cv.buffer = noise(Math.round(ctx.sampleRate * 1.8), (p) => (Math.random() * 2 - 1) * Math.pow(p, 1.5) * (1 - Math.pow(p, 14)));
+      src.connect(cv); cv.connect(hp); wet[3] = g(0); hp.connect(wet[3]); }
+    return { wet, hooks };
+  }
+  G.makeFx = makeFx;
 
   function build() {
     if (ctx || location.protocol === 'file:') return;
@@ -40,25 +73,11 @@
     const src = ctx.createMediaElementSource(audio);
     master = ctx.createGain(); src.connect(master);
     muffle = ctx.createBiquadFilter(); muffle.type = 'lowpass'; muffle.frequency.value = 24000;
+    uw = ctx.createBiquadFilter(); uw.type = 'lowpass'; uw.frequency.value = 24000; uw.Q.value = .8;          // the water: depth and the «под водой» slider close it
     pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;               // (older Safari has none: the stage is then just the filter)
-    master.connect(muffle); if (pan) { muffle.connect(pan); pan.connect(ctx.destination); } else muffle.connect(ctx.destination);
+    master.connect(uw); uw.connect(muffle); if (pan) { muffle.connect(pan); pan.connect(ctx.destination); } else muffle.connect(ctx.destination);
     G.tap = { ctx, node: master };                                // the stereo scope listens here (what you hear, after the effects)
-    const g = (v) => { const n = ctx.createGain(); n.gain.value = v; return n; };
-    const lfo = (hz, depth, target) => { const o = ctx.createOscillator(); o.frequency.value = hz; o.connect(g(depth)).connect(target); o.start(); };
-    // 0 echo: a dark, feeding-back delay
-    { const d = ctx.createDelay(2), f = ctx.createBiquadFilter(), fb = g(.5); d.delayTime.value = .42; f.type = 'lowpass'; f.frequency.value = 2200;
-      src.connect(d); d.connect(f); f.connect(fb); fb.connect(d); wet[0] = g(0); f.connect(wet[0]); }
-    // 1 space: a generated reverb tail
-    { const len = ctx.sampleRate * 3.2, ir = ctx.createBuffer(2, len, ctx.sampleRate);
-      for (let c = 0; c < 2; c++) { const a = ir.getChannelData(c); for (let i = 0; i < len; i++) a[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
-      const cv = ctx.createConvolver(), lp = ctx.createBiquadFilter(); cv.buffer = ir; lp.type = 'lowpass'; lp.frequency.value = 5200;
-      src.connect(cv); cv.connect(lp); wet[1] = g(0); lp.connect(wet[1]); }
-    // 2 flange: very short delay swept by a slow LFO, with feedback
-    { const d = ctx.createDelay(.05), fb = g(.62); d.delayTime.value = .004; lfo(LFO[0], .0028, d.delayTime);
-      src.connect(d); d.connect(fb); fb.connect(d); wet[2] = g(0); d.connect(wet[2]); }
-    // 3 chorus: a slightly longer, gently wobbling copy
-    { const d = ctx.createDelay(.08); d.delayTime.value = .026; lfo(LFO[1], .0042, d.delayTime);
-      src.connect(d); wet[3] = g(0); d.connect(wet[3]); }
+    const fx = makeFx(ctx, src, amt); wet = fx.wet; hooks = fx.hooks;
     wet.forEach((w) => w.connect(master));
     amt.forEach((_, i) => wet[i].gain.value = amt[i] * K[i]);
     setVol(); applySpace(true);
@@ -70,6 +89,7 @@
   document.querySelectorAll('[data-fx]').forEach((el) => el.addEventListener('input', () => {
     const i = +el.dataset.fx; amt[i] = +el.value; paint(el); el.classList.toggle('on', amt[i] > 0);
     if (wet[i]) wet[i].gain.setTargetAtTime(amt[i] * K[i], ctx.currentTime, .06);
+    if (hooks[i]) hooks[i](amt[i]);
   }));
   audio.addEventListener('play', () => { build(); if (ctx && ctx.state === 'suspended') ctx.resume(); });
   if (location.protocol === 'file:') { mix.classList.add('nofx'); $('#fxNote').textContent = 'эффекты работают на http(s): python3 -m http.server'; }
@@ -78,6 +98,7 @@
     requestAnimationFrame(loop);
     const s = (now || 0) / 1000;
     for (let i = 0; i < 4; i++) G.fx[i] += (amt[i] - G.fx[i]) * .08;
+    if (uw) { const cut = Math.min(24000 * Math.pow(1800 / 24000, Math.min(1, (G.depth || 0) / 14)), 24000 * Math.pow(450 / 24000, amt[1])); uw.frequency.setTargetAtTime(cut, ctx.currentTime, .15); }   // deeper = duller, down to 1.8 kHz at 14 m; the slider goes down to 450 Hz
     G.lfo[0] = (s * LFO[0]) % 1; G.lfo[1] = (s * LFO[1]) % 1;
   })();
 })();
