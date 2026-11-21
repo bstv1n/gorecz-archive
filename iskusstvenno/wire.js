@@ -8,18 +8,20 @@
   cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0;transition:opacity 2s ease';
   window.__wireCanvas = cv; document.body.appendChild(cv); setTimeout(() => { cv.style.opacity = '1'; }, 1400);
   const ctx = cv.getContext('2d'), N = 40, sparks = [];
-  let SY = 0, W = 0, H = 0, dpr = 1, grab = null, mx = -1e4, my = -1e4, pvx = 0, pvy = 0, last = performance.now(), acc = 0;
+  let wasOff = false, SY = 0, W = 0, H = 0, dpr = 1, grab = null, mx = -1e4, my = -1e4, pvx = 0, pvy = 0, last = performance.now(), acc = 0;
   const sm = (a, b, x) => { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); };
   // a: where the cable leaves the ceiling; b: its socket on the deck's left edge (null = a loose, frayed end); w: thickness; far: thin and pale, farther from us
   const CFG = [
-    { a: (W, H) => ({ x: W * .46, y: -H * .05 - SY }), b: (r) => ({ x: r.left + r.width * .014, y: r.top + r.height * .40 }), slack: 1.05, w: 1.5, far: 1 },
-    { a: (W, H) => ({ x: W * .18, y: -H * .05 - SY }), b: (r) => ({ x: r.left + r.width * .014, y: r.top + r.height * .64 }), slack: 1.07, w: 2.6 },
-    { a: (W, H) => ({ x: W * .30, y: -H * .05 - SY }), b: (r) => ({ x: r.left + r.width * .014, y: r.top + r.height * .58 }), slack: 1.17, w: 3.4 },
+    { a: (W, H) => ({ x: W * .46, y: -H * .05 - SY }), b: (r) => ({ x: r.left + r.width * .038, y: r.top + r.height * .40 }), slack: 1.05, w: 1.5, far: 1 },
+    { a: (W, H) => ({ x: W * .18, y: -H * .05 - SY }), b: (r) => ({ x: r.left + r.width * .038, y: r.top + r.height * .64 }), slack: 1.07, w: 2.6 },
+    { a: (W, H) => ({ x: W * .30, y: -H * .05 - SY }), b: (r) => ({ x: r.left + r.width * .038, y: r.top + r.height * .58 }), slack: 1.17, w: 3.4 },
     { a: (W, H) => ({ x: W * .385, y: -H * .05 - SY }), b: null, len: .40, w: 2.2 }
   ];
   const ropes = CFG.map((c, k) => ({ c, ph: k * 1.7, P: [], rest: 1 })); window.__ropes = ropes;
-  const ends = (c) => { const r = tt.getBoundingClientRect(); return [c.a(W, H), c.b ? c.b(r) : null]; };
+  let RT = null;                                              // the deck's rectangle, read once per frame
+  const ends = (c) => { const r = RT || (RT = tt.getBoundingClientRect()); return [c.a(W, H), c.b ? c.b(r) : null]; };
   function layout() {
+    RT = null;
     dpr = Math.min(devicePixelRatio || 1, 1) * 0.8; W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr;
     for (const R of ropes) {
       const [a, b] = ends(R.c); R.P = []; const d = b ? Math.hypot(b.x - a.x, b.y - a.y) : H * R.c.len; R.rest = (b ? d * R.c.slack : d) / (N - 1);
@@ -68,7 +70,10 @@
     ctx.restore();
   }
   function frame(now) {
-    SY = window.scrollY || 0; requestAnimationFrame(frame); const dt = Math.min(0.05, (now - last) / 1000); last = now; acc += dt;
+    SY = window.scrollY || 0; RT = null; requestAnimationFrame(frame); const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    { const vt0 = vid ? vid.currentTime : 0; window.WAVE = sm(2.9, 3.5, vt0) * (1 - sm(4.0, 6.2, vt0)); }          // the wave signal keeps running even when the cables are asleep
+    if (SY > H * 1.4) { if (!wasOff) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); wasOff = true; } acc = 0; return; }       // the cables are off screen: no physics, no drawing
+    wasOff = false; acc += dt;
     const S = window.GS || {}, bass = S.bass || 0, vt = vid ? vid.currentTime : 0, wave = sm(2.9, 3.5, vt) * (1 - sm(4.0, 6.2, vt));
     window.WAVE = wave;                                      // the deck's shader reads this to flash with the wave
     const tip = ropes[3].P[N - 1], mid = ropes[2].P[(N * .55) | 0];

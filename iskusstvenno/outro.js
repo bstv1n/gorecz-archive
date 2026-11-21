@@ -1,13 +1,8 @@
-/* infinity.dark outro: what happens when the track ends.
-   0 s      the lamp in the title fails and goes dark, the stereo screen collapses to a line and a point, the lyrics fade, and (with sound on)
-            the needle sits in the run-out groove: one soft tick per turn of the record
-   1.2 s    the page falls into the ember point at the centre of the screen; the fog stays behind, drained
-   ~2.3 s   from that point an infinity sign unfolds: a beam draws it, and each link lights as the beam passes its shoulder
-   then     the beam keeps circulating; hover or focus a link and it comes to rest at that shoulder. "again" is the ember point in the crossing.
-   again    the sign folds back into the point, the page comes back, the lamp strikes again and the record starts from the beginning
-   back     the same, without playing. Esc does it too.
-   The links are the four <a class="end-link"> in index.html, in the order: upper left, lower left, upper right, lower right. A link whose href is
-   still "#" is shown dim with "soon" and does nothing. With prefers-reduced-motion everything is simply there, still. */
+/* gorecz — искусственно (archive 002) outro:
+   0 s      лампа гаснет, страница уходит в глубину, тихо проступает далёкий шум прибоя
+   ~2.2 s   поэтапное появление: сначала туман и горизонт → затем разгорается ядро маяка → мягко раскрывается луч и ссылки
+   live     туман дрейфует, луч скользит по горизонту; при наведении на ссылку — плавно наводится и фокусируется на ней
+   again    туман рассеивается, страница возвращается, трек запускается сначала. Esc / back — возврат без запуска. */
 (() => {
   const S = window.GS;
   const screen = document.getElementById('end-screen'), cv = document.getElementById('outro-cv');
@@ -17,131 +12,262 @@
   const links = [...screen.querySelectorAll('.end-link')];
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const cx = cv.getContext('2d');
-  const OUT = { powerDown: 1200, collapse: 900, draw: 2000, lap: 7, groove: true };   // ms, ms (= the page's transition in style.css), ms, seconds per lap of the beam, the run-out groove ticks
-  const N = 480, TAU = Math.PI * 2, BEAM = '176,204,250', EMBER = '179,50,79';
+
+  if (!document.getElementById('outro-clean-hover')) {
+    const st = document.createElement('style');
+    st.id = 'outro-clean-hover';
+    st.textContent = `
+      #end-screen .end-link, #end-screen .end-link::before, #end-screen .end-link::after {
+        animation: none !important;
+      }
+      #end-screen .end-link {
+        transition: color .35s ease, text-shadow .35s ease, opacity .5s ease !important;
+      }
+      #end-screen .end-link:hover, #end-screen .end-link:focus-visible {
+        color: #f0f8ff !important;
+        text-shadow: 0 0 14px rgba(175, 225, 250, .85), 0 0 32px rgba(130, 200, 240, .45) !important;
+        opacity: 1 !important;
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  const OUT = { powerDown: 1100, collapse: 900, draw: 2800, surf: true };
+  const TAU = Math.PI * 2;
+  const BEAM = '175,225,250', CORE = '235,248,255', MIST = '26,48,68';
   const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-  const X = new Float32Array(N + 1), Y = new Float32Array(N + 1);
-  let phase = 'off', timers = [], W = 0, H = 0, anchors = [], head = 0, hold = -1, t0 = 0, rt0 = 0, last = 0, raf = 0;
-  let grooveSrc = null, grooveGain = null, grooveCtx = null;
+  const seg = (p, a, b) => ease(Math.max(0, Math.min(1, (p - a) / (b - a))));
+
+  let phase = 'off', timers = [], W = 0, H = 0, anchors = [], hold = -1;
+  let t0 = 0, rt0 = 0, last = 0, raf = 0, beamAng = -0.35, beamSpread = 0.24;
+  let surfSrc = null, surfGain = null, surfCtx = null;
+
+  const clouds = Array.from({ length: 7 }, (_, i) => ({
+    x: (i / 7) + Math.random() * 0.15,
+    y: 0.25 + (i % 3) * 0.25 + (Math.random() - 0.5) * 0.12,
+    rx: 0.34 + Math.random() * 0.26,
+    ry: 0.16 + Math.random() * 0.14,
+    sp: (0.008 + Math.random() * 0.012) * (i % 2 ? 1 : -1),
+    a: 0.17 + Math.random() * 0.13
+  }));
 
   const later = (ms, fn) => { timers.push(setTimeout(fn, ms)); };
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
 
-  // links that do not go anywhere yet are dim and say so
   links.forEach((a, q) => {
     const href = a.getAttribute('href');
     if (!href || href === '#') {
       a.setAttribute('aria-disabled', 'true'); a.removeAttribute('target'); a.tabIndex = -1;
-      const s = document.createElement('small'); s.textContent = 'soon'; a.appendChild(s);
       a.addEventListener('click', (e) => e.preventDefault());
     }
-    const on = () => { if (anchors[q] && (phase === 'live' || phase === 'draw')) hold = anchors[q].i; }, off = () => { hold = -1; };
-    a.addEventListener('mouseenter', on); a.addEventListener('focus', on); a.addEventListener('mouseleave', off); a.addEventListener('blur', off);
+    const on = () => { if (anchors[q] && (phase === 'live' || phase === 'draw')) hold = q; };
+    const off = () => { hold = -1; };
+    a.addEventListener('mouseenter', on); a.addEventListener('focus', on);
+    a.addEventListener('mouseleave', off); a.addEventListener('blur', off);
   });
 
-  // the figure: a lemniscate that starts in its own crossing (the screen's centre) and goes once round. Shoulders = the four points where each lobe is highest / lowest.
   function layout() {
     W = innerWidth; H = innerHeight;
     const d = Math.min(devicePixelRatio || 1, 2);
     cv.width = Math.round(W * d); cv.height = Math.round(H * d);
     cx.setTransform(d, 0, 0, d, 0, 0);
-    const rx = Math.min(W * 0.44, 580, H), ry = Math.min(rx * 1.3, (H / 2 - 120) / 0.3535), mx = W / 2, my = H / 2;
-    for (let k = 0; k <= N; k++) {
-      const u = Math.PI / 2 + k / N * TAU, s = Math.sin(u), c = Math.cos(u), den = 1 + s * s;
-      X[k] = mx + c / den * rx; Y[k] = my - s * c / den * ry;
-    }
-    const best = [-1, -1, -1, -1], bv = [-1, -1, -1, -1];                       // upper left, lower left, upper right, lower right
-    for (let k = 0; k < N; k++) {
-      const dx = X[k] - mx, dy = Y[k] - my;
-      if (Math.abs(dx) < rx * 0.2) continue;
-      const q = (dx < 0 ? 0 : 2) + (dy < 0 ? 0 : 1), v = Math.abs(dy);
-      if (v > bv[q]) { bv[q] = v; best[q] = k; }
-    }
-    anchors = best.map((i, q) => ({ i, x: X[i], y: Y[i], up: q % 2 === 0 }));
+
+    const mx = W / 2, my = H / 2;
+    const dx = Math.min(W * 0.28, 340), dy = Math.min(H * 0.22, 165);
+    const pts = [
+      { x: mx - dx, y: my - dy, up: true },
+      { x: mx - dx * 0.92, y: my + dy, up: false },
+      { x: mx + dx, y: my - dy, up: true },
+      { x: mx + dx * 0.92, y: my + dy, up: false }
+    ];
+    anchors = pts.map((p) => ({ ...p, ang: Math.atan2(p.y - my, p.x - mx) }));
     links.slice(0, 4).forEach((a, q) => {
-      a.style.top = anchors[q].y + 'px'; a.classList.toggle('down', !anchors[q].up);
-      const w = a.offsetWidth || 0;                                              // on a narrow screen a long name must not run off the edge
-      a.style.left = (w ? Math.min(Math.max(anchors[q].x, w / 2 + 12), W - w / 2 - 12) : anchors[q].x) + 'px';
+      a.style.top = anchors[q].y + 'px';
+      a.classList.toggle('down', !anchors[q].up);
+      const w = a.offsetWidth || 0;
+      a.style.left = (w ? Math.min(Math.max(anchors[q].x, w / 2 + 16), W - w / 2 - 16) : anchors[q].x) + 'px';
     });
     screen.classList.add('placed');
   }
 
-  function path(a, b) { cx.beginPath(); cx.moveTo(X[a], Y[a]); for (let k = a + 1; k <= b; k++) cx.lineTo(X[k], Y[k]); }
-  function still() {                                                           // reduced motion: the whole figure, quietly
-    cx.clearRect(0, 0, W, H); cx.lineJoin = 'round'; path(0, N);
-    cx.lineWidth = 8; cx.strokeStyle = 'rgba(' + BEAM + ',.05)'; cx.stroke();
-    cx.lineWidth = 1.3; cx.strokeStyle = 'rgba(' + BEAM + ',.3)'; cx.stroke();
+  function drawScene(t, fogEnv, coreEnv, beamEnv) {
+    cx.clearRect(0, 0, W, H);
+    if (fogEnv <= 0.001) return;
+    const mx = W / 2, my = H / 2;
+
+    // 1. Пелена прибрежного тумана
+    const bg = cx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, `rgba(14,28,42,${(0.68 * fogEnv).toFixed(3)})`);
+    bg.addColorStop(0.5, `rgba(28,50,70,${(0.58 * fogEnv).toFixed(3)})`);
+    bg.addColorStop(1, `rgba(10,20,32,${(0.80 * fogEnv).toFixed(3)})`);
+    cx.fillStyle = bg;
+    cx.fillRect(0, 0, W, H);
+
+    // 2. Дрейфующие слои тумана
+    for (const c of clouds) {
+      const px = (((c.x + t * c.sp) % 1.4) + 1.4) % 1.4 - 0.2;
+      const x = px * W, y = c.y * H + Math.sin(t * 0.25 + c.x * 10) * 14;
+      const r = Math.max(W * c.rx, H * c.ry);
+      const gr = cx.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, `rgba(${MIST},${(c.a * fogEnv).toFixed(3)})`);
+      gr.addColorStop(0.55, `rgba(120,165,198,${(c.a * 0.44 * fogEnv).toFixed(3)})`);
+      gr.addColorStop(1, 'rgba(26,48,68,0)');
+      cx.fillStyle = gr;
+      cx.beginPath(); cx.arc(x, y, r, 0, TAU); cx.fill();
+    }
+
+    // 3. Линия горизонта
+    const hHalf = (W * 0.47) * fogEnv;
+    const hGrad = cx.createLinearGradient(mx - hHalf, my, mx + hHalf, my);
+    hGrad.addColorStop(0, 'rgba(' + BEAM + ',0)');
+    hGrad.addColorStop(0.5, `rgba(${BEAM},${(0.38 * fogEnv).toFixed(3)})`);
+    hGrad.addColorStop(1, 'rgba(' + BEAM + ',0)');
+    cx.strokeStyle = hGrad;
+    cx.lineWidth = 1;
+    cx.beginPath(); cx.moveTo(mx - hHalf, my); cx.lineTo(mx + hHalf, my); cx.stroke();
+
+    // Водная рябь под горизонтом
+    for (let i = 1; i <= 4; i++) {
+      const ry = my + i * 16 + Math.sin(t * 0.8 + i) * 2;
+      const rw = hHalf * (0.46 - i * 0.08);
+      cx.strokeStyle = `rgba(${BEAM},${((0.16 - i * 0.028) * fogEnv).toFixed(3)})`;
+      cx.beginPath(); cx.moveTo(mx - rw, ry); cx.lineTo(mx + rw, ry); cx.stroke();
+    }
+
+    // 4. Объёмный луч маяка
+    if (beamEnv > 0.001) {
+      const reach = Math.hypot(W, H) * (0.18 + 0.38 * beamEnv);
+      const spread = beamSpread;
+      cx.save();
+      cx.translate(mx, my);
+      cx.rotate(beamAng);
+      const bGrad = cx.createRadialGradient(0, 0, 8, 0, 0, reach);
+      bGrad.addColorStop(0, `rgba(${CORE},${(0.32 * beamEnv).toFixed(3)})`);
+      bGrad.addColorStop(0.35, `rgba(${BEAM},${(0.13 * beamEnv).toFixed(3)})`);
+      bGrad.addColorStop(1, 'rgba(' + BEAM + ',0)');
+      cx.fillStyle = bGrad;
+      cx.beginPath();
+      cx.moveTo(0, 0);
+      cx.arc(0, 0, reach, -spread, spread);
+      cx.closePath();
+      cx.fill();
+      cx.restore();
+
+      // Тихие расходящиеся круги-импульсы от маяка
+      for (let k = 0; k < 2; k++) {
+        const p = (t * 0.22 + k * 0.5) % 1;
+        const rr = 22 + p * Math.min(W, H) * 0.28;
+        cx.strokeStyle = `rgba(${BEAM},${((1 - p) * 0.19 * beamEnv).toFixed(3)})`;
+        cx.lineWidth = 1;
+        cx.beginPath(); cx.arc(mx, my, rr, 0, TAU); cx.stroke();
+      }
+    }
+
+    // 5. Мягкий ореол за ссылками
+    if (beamEnv > 0.001) {
+      anchors.forEach((a, q) => {
+        let diff = a.ang - beamAng;
+        while (diff > Math.PI) diff -= TAU;
+        while (diff < -Math.PI) diff += TAU;
+        const sweep = Math.max(0, 1 - Math.abs(diff) / 0.55);
+        const active = hold === q ? 1 : 0;
+        const k = Math.max(active, sweep * 0.7);
+        const rad = 52 + k * 28;
+
+        const hg = cx.createRadialGradient(a.x, a.y, 0, a.x, a.y, rad);
+        hg.addColorStop(0, `rgba(${CORE},${((0.12 + k * 0.18) * beamEnv).toFixed(3)})`);
+        hg.addColorStop(0.45, `rgba(${BEAM},${((0.05 + k * 0.10) * beamEnv).toFixed(3)})`);
+        hg.addColorStop(1, 'rgba(' + BEAM + ',0)');
+        cx.fillStyle = hg;
+        cx.beginPath(); cx.arc(a.x, a.y, rad, 0, TAU); cx.fill();
+
+        cx.fillStyle = `rgba(${CORE},${((0.32 + k * 0.55) * beamEnv).toFixed(3)})`;
+        cx.beginPath(); cx.arc(a.x, a.y, 1.8 + k * 0.9, 0, TAU); cx.fill();
+      });
+    }
+
+    // 6. Ядро маяка в центре
+    if (coreEnv > 0.001) {
+      const pulse = 0.88 + Math.sin(t * 1.4) * 0.12;
+      const rad = (20 + 30 * coreEnv) * pulse;
+      const gr = cx.createRadialGradient(mx, my, 0, mx, my, rad);
+      gr.addColorStop(0, `rgba(${CORE},${(0.88 * coreEnv).toFixed(3)})`);
+      gr.addColorStop(0.28, `rgba(${BEAM},${(0.36 * coreEnv).toFixed(3)})`);
+      gr.addColorStop(1, 'rgba(' + BEAM + ',0)');
+      cx.fillStyle = gr;
+      cx.beginPath(); cx.arc(mx, my, rad, 0, TAU); cx.fill();
+    }
   }
+
+  function still() { beamAng = -0.35; beamSpread = 0.24; drawScene(0, 1, 1, 1); }
 
   function frame(now) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    let shown = N;
+    const t = now / 1000;
+    let fogEnv = 1, coreEnv = 1, beamEnv = 1;
+
     if (phase === 'draw') {
       const p = Math.min(1, (now - t0) / OUT.draw);
-      head = ease(p) * N; shown = head;
-      anchors.forEach((a, q) => { if (head >= a.i && links[q]) links[q].classList.add('lit'); });   // each link lights as the beam passes its shoulder
-      if (p >= 1) { phase = 'live'; head = 0; }
+      fogEnv = seg(p, 0.0, 0.52);
+      coreEnv = seg(p, 0.28, 0.72);
+      beamEnv = seg(p, 0.48, 1.0);
+      beamAng = (beamAng + dt * 0.22) % TAU;
+      links.forEach((l, q) => { if (p > 0.55 + q * 0.09) l.classList.add('lit'); });
+      if (p >= 1) phase = 'live';
     } else if (phase === 'live') {
-      if (hold >= 0) {                                                         // come to rest at the shoulder you point at
-        let diff = hold - head; if (diff > N / 2) diff -= N; if (diff < -N / 2) diff += N;
-        head = (head + Math.sign(diff) * Math.min(Math.abs(diff), N * dt * 0.9) + N) % N;
-      } else head = (head + dt * N / OUT.lap) % N;
+      if (hold >= 0 && anchors[hold]) {
+        let diff = anchors[hold].ang - beamAng;
+        while (diff > Math.PI) diff -= TAU;
+        while (diff < -Math.PI) diff += TAU;
+        beamAng += diff * Math.min(1, dt * 4.5);
+      } else {
+        beamAng = (beamAng + dt * 0.22) % TAU;
+      }
     } else if (phase === 'retract') {
-      const p = Math.min(1, (now - rt0) / 700);
-      shown = Math.max(1, N * (1 - ease(p))); head = shown;
+      const p = Math.min(1, (now - rt0) / 750);
+      fogEnv = coreEnv = beamEnv = 1 - ease(p);
       if (p >= 1) { cancelAnimationFrame(raf); raf = 0; cx.clearRect(0, 0, W, H); return; }
     }
-    cx.clearRect(0, 0, W, H);
-    cx.lineJoin = 'round'; cx.lineCap = 'round';
-    const upto = Math.max(1, Math.min(N, Math.floor(shown)));
-    path(0, upto);
-    cx.lineWidth = 8; cx.strokeStyle = 'rgba(' + BEAM + ',.05)'; cx.stroke();
-    cx.lineWidth = 1.3; cx.strokeStyle = 'rgba(' + BEAM + ',.24)'; cx.stroke();
 
-    const L = 90, h0 = Math.floor(head);                                       // the runner: the stretch just behind the beam, brightest at the head
-    cx.lineWidth = 2;
-    for (let j = 0; j < L; j += 3) {
-      let a = h0 - L + j, b = a + 3;
-      if (phase !== 'live') { if (a < 0) continue; } else { a = (a + N) % N; b = (b + N) % N; }
-      cx.strokeStyle = 'rgba(' + BEAM + ',' + (0.85 * Math.pow(j / L, 1.7)).toFixed(3) + ')';
-      cx.beginPath(); cx.moveTo(X[a], Y[a]); cx.lineTo(X[b], Y[b]); cx.stroke();
-    }
-    if (phase === 'live' && hold >= 0 && anchors[0]) {                         // the shoulder you point at: a ring
-      const a = anchors.find((z) => z.i === hold);
-      if (a) { cx.strokeStyle = 'rgba(' + BEAM + ',.55)'; cx.lineWidth = 1.2; cx.beginPath(); cx.arc(a.x, a.y, 7, 0, TAU); cx.stroke(); }
-    }
-    const hi = Math.min(N - 1, h0), f = head - hi, hx = X[hi] + (X[hi + 1] - X[hi]) * f, hy = Y[hi] + (Y[hi + 1] - Y[hi]) * f;
-    const gr = cx.createRadialGradient(hx, hy, 0, hx, hy, 17);                 // the beam's head: the ember point
-    gr.addColorStop(0, 'rgba(255,214,220,.95)'); gr.addColorStop(0.25, 'rgba(' + EMBER + ',.7)'); gr.addColorStop(1, 'rgba(' + EMBER + ',0)');
-    cx.fillStyle = gr; cx.beginPath(); cx.arc(hx, hy, 17, 0, TAU); cx.fill();
+    const targetSpread = (phase === 'live' && hold >= 0) ? 0.16 : 0.24;
+    beamSpread += (targetSpread - beamSpread) * Math.min(1, dt * 5);
+
+    drawScene(t, fogEnv, coreEnv, beamEnv);
   }
 
-  // the needle in the run-out groove: a hiss and one soft tick per turn of the record (33 1/3 rpm = 1.8 s), quietly, through the master volume
-  function groove(on) {
+  function surf(on) {
     const T = window.GFX && window.GFX.tap;
-    if (!OUT.groove || !T) return;
+    if (!OUT.surf || !T) return;
     try {
       const ctx = T.ctx;
       if (on) {
-        if (grooveSrc) return;
-        const sr = ctx.sampleRate, len = Math.round(sr * 1.8), buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
-        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * 0.03;
-        const n = Math.round(sr * 0.012);
-        for (let i = 0; i < n; i++) d[i] += (Math.random() * 2 - 1) * 0.9 * Math.pow(1 - i / n, 2.5);
-        for (let k = 0; k < 3; k++) { const at = n + Math.floor(Math.random() * (len - n - 200)), m = Math.round(sr * 0.002); for (let i = 0; i < m; i++) d[at + i] += (Math.random() * 2 - 1) * 0.25 * (1 - i / m); }
-        const src = ctx.createBufferSource(), g = ctx.createGain();
-        src.buffer = buf; src.loop = true; g.gain.value = 0; src.connect(g); g.connect(T.node); src.start();
-        g.gain.setTargetAtTime(0.06, ctx.currentTime, 0.6);
-        grooveSrc = src; grooveGain = g; grooveCtx = ctx;
-        later(24000, () => groove(false));
-      } else if (grooveSrc) {
-        const s = grooveSrc, g = grooveGain, c = grooveCtx;
-        grooveSrc = grooveGain = null;
-        g.gain.setTargetAtTime(0, c.currentTime, 0.25);
-        setTimeout(() => { try { s.stop(); } catch (_) {} }, 1500);
+        if (surfSrc) return;
+        const sr = ctx.sampleRate, len = Math.round(sr * 6), buf = ctx.createBuffer(2, len, sr);
+        for (let c = 0; c < 2; c++) {
+          const d = buf.getChannelData(c);
+          let b0 = 0, b1 = 0, b2 = 0;
+          for (let i = 0; i < len; i++) {
+            const w = Math.random() * 2 - 1;
+            b0 = 0.997 * b0 + w * 0.029; b1 = 0.985 * b1 + w * 0.032; b2 = 0.950 * b2 + w * 0.048;
+            const swell = 0.55 + 0.45 * Math.sin((i / len) * TAU);
+            d[i] = (b0 + b1 + b2) * 0.35 * swell;
+          }
+        }
+        const src = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+        lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 0.6;
+        src.buffer = buf; src.loop = true; g.gain.value = 0;
+        src.connect(lp); lp.connect(g); g.connect(T.node); src.start();
+        g.gain.setTargetAtTime(0.055, ctx.currentTime, 1.2);
+        surfSrc = src; surfGain = g; surfCtx = ctx;
+        later(28000, () => surf(false));
+      } else if (surfSrc) {
+        const s = surfSrc, g = surfGain, c = surfCtx;
+        surfSrc = surfGain = null;
+        g.gain.setTargetAtTime(0, c.currentTime, 0.4);
+        setTimeout(() => { try { s.stop(); } catch (_) {} }, 1800);
       }
-    } catch (_) { grooveSrc = null; }
+    } catch (_) { surfSrc = null; }
   }
 
   function open() {
@@ -151,17 +277,17 @@
     screen.classList.add('show');
     try { screen.focus({ preventScroll: true }); } catch (_) {}
     if (reduce) { phase = 'live'; links.forEach((l) => l.classList.add('lit')); screen.classList.add('live'); still(); return; }
-    phase = 'draw'; head = 0; hold = -1; t0 = last = performance.now();
+    phase = 'draw'; hold = -1; beamAng = -0.55; beamSpread = 0.24; t0 = last = performance.now();
     links.forEach((l) => l.classList.remove('lit'));
     raf = requestAnimationFrame(frame);
-    later(OUT.draw * 0.85, () => screen.classList.add('live'));                // "again" arrives as the beam closes the figure
+    later(OUT.draw * 0.72, () => screen.classList.add('live'));
   }
 
   function start() {
     if (phase !== 'off') return;
     phase = 'down'; body.classList.add('is-ending'); S.dark = true;
     if (S.lamp) S.lamp.kill();
-    groove(true);
+    surf(true);
     if (reduce) { body.classList.add('collapsed'); later(60, open); return; }
     later(OUT.powerDown, () => { phase = 'collapse'; body.classList.add('collapsed'); });
     later(OUT.powerDown + OUT.collapse + 150, open);
@@ -171,9 +297,9 @@
     if (phase !== 'live' && phase !== 'draw') return;
     clearTimers(); phase = 'retract'; rt0 = performance.now(); hold = -1;
     screen.classList.remove('live'); links.forEach((l) => l.classList.remove('lit'));
-    groove(false);
+    surf(false);
     if (!raf && !reduce) raf = requestAnimationFrame(frame);
-    const a = reduce ? 0 : 700, b = reduce ? 0 : 950;
+    const a = reduce ? 0 : 750, b = reduce ? 0 : 950;
     later(a, () => {
       screen.classList.remove('show'); screen.setAttribute('aria-hidden', 'true'); screen.setAttribute('inert', '');
       if (page) page.inert = false;
@@ -195,7 +321,7 @@
   screen.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); close(false); return; }
     if (e.key !== 'Tab') return;
-    const f = [...links.filter((l) => l.getAttribute('aria-disabled') !== 'true'), again, back];   // keep Tab inside the end screen
+    const f = [...links.filter((l) => l.getAttribute('aria-disabled') !== 'true'), again, back];
     const i = f.indexOf(document.activeElement);
     if (e.shiftKey && (i <= 0)) { e.preventDefault(); f[f.length - 1].focus(); }
     else if (!e.shiftKey && (i === f.length - 1 || i < 0)) { e.preventDefault(); f[0].focus(); }

@@ -52,14 +52,26 @@
       lfo(LFO[0], .0025, dL.delayTime); lfo(LFO[1], .0025, dR.delayTime);
       fL.connect(m, 0, 0); fR.connect(m, 0, 1); wet[0] = g(0); m.connect(wet[0]); }
     wet[1] = g(0);
-    { const hp = f('highpass', 380), lp = f('lowpass', 3600), sh = ctx.createWaveShaper(), gate = g(1), crack = g(0), N = 1024, curve = new Float32Array(N);
-      for (let i = 0; i < N; i++) curve[i] = Math.round((i * 2 / (N - 1) - 1) * 7.5) / 7.5;                                                      // 16 levels: a 4-bit crush
-      sh.curve = curve; src.connect(sh); sh.connect(hp); hp.connect(lp); lp.connect(gate); wet[2] = g(0); gate.connect(wet[2]);       // crush first, then squeeze it through the radio band: no harsh fizz
-      const cs = ctx.createBufferSource(), chp = f('highpass', 1500); cs.buffer = noise(ctx.sampleRate * 2, () => (Math.random() < .0015 ? Math.random() * 2 - 1 : 0)); cs.loop = true; cs.start(); cs.connect(chp); chp.connect(crack); crack.connect(wet[2]);
-      hooks[2] = (a) => { crack.gain.value = a * .5; };
-      if (typeof OfflineAudioContext === 'undefined' || !(ctx instanceof OfflineAudioContext)) setInterval(() => {                               // the signal drops out for a moment
-        if (amt[2] > .02 && Math.random() < amt[2] * .5) { const t = ctx.currentTime; gate.gain.cancelScheduledValues(t); gate.gain.setValueAtTime(gate.gain.value, t); gate.gain.linearRampToValueAtTime(0, t + .01); gate.gain.linearRampToValueAtTime(1, t + .05 + Math.random() * .2); }
-      }, 160); }
+    { const hp = f('highpass', 380), lp = f('lowpass', 2400), dG = ctx.createDelay(.25), gIn = g(0), gFb = g(0);
+      lp.Q.value = .5; dG.delayTime.value = .065;
+      src.connect(hp); hp.connect(lp); lp.connect(gIn); gIn.connect(dG); dG.connect(gFb); gFb.connect(dG);
+      wet[2] = g(0); dG.connect(wet[2]);
+      if (typeof OfflineAudioContext === 'undefined' || !(ctx instanceof OfflineAudioContext)) setInterval(() => {
+        if (amt[2] <= .02) return;
+        if (Math.random() < amt[2] * .42) {
+          const t = ctx.currentTime, slice = .045 + Math.random() * .055, tail = .14 + Math.random() * .18;
+          dG.delayTime.setValueAtTime(slice, t);
+          gIn.gain.cancelScheduledValues(t); gIn.gain.setValueAtTime(0, t); gIn.gain.linearRampToValueAtTime(1, t + .005); gIn.gain.setValueAtTime(1, t + slice - .005); gIn.gain.linearRampToValueAtTime(0, t + slice);
+          gFb.gain.cancelScheduledValues(t); gFb.gain.setValueAtTime(.74, t); gFb.gain.linearRampToValueAtTime(0, t + slice + tail);
+          if (dry) {
+            const dip = Math.max(.08, 1 - amt[2] * .85);
+            dry.gain.cancelScheduledValues(t); dry.gain.setValueAtTime(dry.gain.value, t);
+            dry.gain.linearRampToValueAtTime(dip, t + .012);
+            dry.gain.setValueAtTime(dip, t + slice);
+            dry.gain.linearRampToValueAtTime(1, t + slice + .06);
+          }
+        }
+      }, 240); }
     { const cv = ctx.createConvolver(), hp = f('highpass', 300); cv.buffer = noise(Math.round(ctx.sampleRate * 1.8), (p) => (Math.random() * 2 - 1) * Math.pow(p, 1.5) * (1 - Math.pow(p, 14)));
       src.connect(cv); cv.connect(hp); wet[3] = g(0); hp.connect(wet[3]); }
     return { wet, hooks };
@@ -71,13 +83,14 @@
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
     ctx = new AC(); t0 = ctx.currentTime;
     const src = ctx.createMediaElementSource(audio);
-    master = ctx.createGain(); src.connect(master);
+    master = ctx.createGain();
+    const dry = ctx.createGain(); src.connect(dry); dry.connect(master);
     muffle = ctx.createBiquadFilter(); muffle.type = 'lowpass'; muffle.frequency.value = 24000;
     uw = ctx.createBiquadFilter(); uw.type = 'lowpass'; uw.frequency.value = 24000; uw.Q.value = .8;          // the water: depth and the «под водой» slider close it
     pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;               // (older Safari has none: the stage is then just the filter)
     master.connect(uw); uw.connect(muffle); if (pan) { muffle.connect(pan); pan.connect(ctx.destination); } else muffle.connect(ctx.destination);
     G.tap = { ctx, node: master };                                // the stereo scope listens here (what you hear, after the effects)
-    const fx = makeFx(ctx, src, amt); wet = fx.wet; hooks = fx.hooks;
+    const fx = makeFx(ctx, src, amt, dry); wet = fx.wet; hooks = fx.hooks;
     wet.forEach((w) => w.connect(master));
     amt.forEach((_, i) => wet[i].gain.value = amt[i] * K[i]);
     setVol(); applySpace(true);

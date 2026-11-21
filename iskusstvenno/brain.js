@@ -4,9 +4,9 @@
    (a beat / a change above the recent average). Regions are loosely mapped; artistic, not neuroscience. */
 (() => {
   const R = 6, 
-    NAMES = ['лобная доля', 'теменная доля', 'височная доля', 'затылочная доля', 'мозжечок', 'ядро'],
-    ROLE = ['ожидание', 'внимание', 'слух · тембр', 'внутренние образы', 'ритм · тайминг', 'эмоции · отклик'],
-    DESC = [
+    NAMES0 = ['лобная доля', 'теменная доля', 'височная доля', 'затылочная доля', 'мозжечок', 'ядро'],
+    ROLE0 = ['ожидание', 'внимание', 'слух · тембр', 'внутренние образы', 'ритм · тайминг', 'эмоции · отклик'],
+    DESC0 = [
       ['Анализ структуры, прогнозирование', 'дропа и синкоп.'],
       ['Пространственная ориентация.', 'Фокус на хвостах реверберации', 'и глитчах.'],
       ['Частотный анализ. Прямой отклик', 'на саб-бас и перкуссионные', 'транзиенты.'],
@@ -14,7 +14,7 @@
       ['Подсознательная синхронизация', 'с грувом и микроритмикой.'],
       ['Дофаминовый релиз на разрешении', 'аккордов. Физическое погружение.']
     ]
-    const RGB = [
+    const RGB0 = [
       [135, 175, 210], // 0: лобная — льдисто-голубой (ice blue)
       [155, 160, 205], // 1: теменная — пыльный индиго (muted indigo)
       [100, 185, 180], // 2: височная — приглушенный тил (dark teal)
@@ -65,22 +65,39 @@
     return hull;
   }
 
-  function mount(cv, src) {
+  function mount(cv, src, opts) {
+    opts = opts || {};                                       // optional world: { names, roles, desc, rgb, order, title, restore }
+    const NAMES = opts.names || NAMES0, ROLE = opts.roles || ROLE0, DESC = opts.desc || DESC0, RGB = opts.rgb || RGB0, ORDER = opts.order || [0, 0, 0, 0, 0, 0];
     const P = shape(), n = P.length, cx = cv.getContext('2d'), E = [], adj = Array.from({ length: n }, () => []), seen = new Set();
     const ptsByR = Array.from({ length: R }, () => []); // Храним индексы точек по зонам для контура
 
+    // the 3 nearest neighbours of every neuron through a uniform grid, widened until the 3rd neighbour is surely inside the searched cells (identical edges to comparing all pairs, about 3x faster: 140 -> 51 ms)
+    const CS = .09, gk = (x, y, z) => ((x + 64) * 130 + (y + 64)) * 130 + (z + 64), grid = new Map();
+    for (let i = 0; i < n; i++) { const k = gk(Math.floor(P[i].x / CS), Math.floor(P[i].y / CS), Math.floor(P[i].z / CS)); (grid.get(k) || grid.set(k, []).get(k)).push(i); }
+    const take = (b, i, j) => { const d = (P[i].x - P[j].x) ** 2 + (P[i].y - P[j].y) ** 2 + (P[i].z - P[j].z) ** 2; if (d < b[2][0]) { b[2] = [d, j]; if (b[2][0] < b[1][0]) { const t = b[1]; b[1] = b[2]; b[2] = t; if (b[1][0] < b[0][0]) { const t2 = b[0]; b[0] = b[1]; b[1] = t2; } } } };
+    const near3 = (i) => {
+      const x0 = Math.floor(P[i].x / CS), y0 = Math.floor(P[i].y / CS), z0 = Math.floor(P[i].z / CS);
+      for (let r = 1; r <= 5; r++) {
+        const b = [[9, -1], [9, -1], [9, -1]];
+        for (let a = -r; a <= r; a++) for (let c = -r; c <= r; c++) for (let e = -r; e <= r; e++) { const cell = grid.get(gk(x0 + a, y0 + c, z0 + e)); if (cell) for (const j of cell) if (j !== i) take(b, i, j); }
+        if (b[2][1] >= 0 && b[2][0] <= (r * CS) ** 2) return b;
+      }
+      const b = [[9, -1], [9, -1], [9, -1]]; for (let j = 0; j < n; j++) if (j !== i) take(b, i, j); return b;
+    };
     for (let i = 0; i < n; i++) {
       ptsByR[P[i].r].push(i);
-      const b = [[9, -1], [9, -1], [9, -1]];
-      for (let j = 0; j < n; j++) { if (j === i) continue; const d = (P[i].x - P[j].x) ** 2 + (P[i].y - P[j].y) ** 2 + (P[i].z - P[j].z) ** 2;
-        if (d < b[2][0]) { b[2] = [d, j]; if (b[2][0] < b[1][0]) { const t = b[1]; b[1] = b[2]; b[2] = t; if (b[1][0] < b[0][0]) { const t2 = b[0]; b[0] = b[1]; b[1] = t2; } } } }
+      const b = near3(i);
       for (const [, j] of b) { const key = i < j ? i * 8192 + j : j * 8192 + i; if (j >= 0 && !seen.has(key)) { seen.add(key); const e = { a: i, b: j, r: P[i].r }; E.push(e); adj[i].push(e); adj[j].push(e); } }
     }
     const byR = Array.from({ length: R }, (_, r) => E.filter((e) => e.r === r)), C = Array.from({ length: R }, () => ({ x: 0, y: 0, z: 0, c: 0 }));
     P.forEach((p) => { const c = C[p.r]; c.x += p.x; c.y += p.y; c.z += p.z; c.c++; }); C.forEach((c) => { c.x /= c.c; c.y /= c.c; c.z /= c.c; });
     C[0].x = 0; C[1].x = 0; C[3].x = 0;
     
-    const act = new Float32Array(R), dispAct = new Float32Array(R), fl = new Float32Array(n), X = new Float32Array(n), Y = new Float32Array(n), Z = new Float32Array(n), pulses = [];
+    // memory fragments: every neuron has its own scatter, row slip (like the cover) and the moment it snaps into place
+    const RS = Array.from({ length: 16 }, () => (rnd() - .5) * .9), KP = new Float32Array(n).fill(1); let restS = opts.restore ? 0 : 1;
+    const sst = (a, b, x) => { x = Math.min(1, Math.max(0, (x - a) / (b - a))); return x * x * (3 - 2 * x); };
+    P.forEach((p) => { p.sx = (rnd() - .5) * 1.3; p.sy = (rnd() - .5) * .9; p.sz = (rnd() - .5) * 1.3; p.th = ORDER[p.r] + rnd() * .3; p.row = Math.min(15, Math.max(0, Math.floor((p.y + .6) * 13))); });
+    const GX = new Float32Array(n), GY = new Float32Array(n), act = new Float32Array(R), dispAct = new Float32Array(R), fl = new Float32Array(n), X = new Float32Array(n), Y = new Float32Array(n), Z = new Float32Array(n), pulses = [];
     
     // Анимация HUD: плавное появление (0..1)
     const hudAct = new Float32Array(R);
@@ -106,7 +123,7 @@
     cv.addEventListener('pointercancel', () => { drag = 0; });
     cv.addEventListener('pointerleave', () => { mx = my = -999; drag = 0; });
     
-    const go = (e, from) => { if (pulses.length < 1000) pulses.push({ e, f: from, t: 0 }); };
+    const go = (e, from) => { if (pulses.length < 1000 && KP[e.a] > .55 && KP[e.b] > .55) pulses.push({ e, f: from, t: 0 }); };
 
     (function frame(now) {
       requestAnimationFrame(frame); if (!vis) { last = now; return; }
@@ -128,10 +145,11 @@
       if (!drag) ang += dt * .12;
       
       const ca = Math.cos(ang), sa = Math.sin(ang), ct = Math.cos(-.28), st = Math.sin(-.28), sc = Math.min(W * .34, H * .62), pr = (x, y, z) => { const x1 = x * ca + z * sa, z0 = -x * sa + z * ca, y1 = y * ct - z0 * st, z1 = y * st + z0 * ct, k = 1.7 / (1.7 - z1); return [W / 2 + x1 * sc * k, H / 2 - y1 * sc * k, z1]; };
-      const gb = 1 + nb * .05;
+      const gb = 1 + nb * .05; if (opts.restore) restS += (Math.min(1, Math.max(0, opts.restore())) - restS) * Math.min(1, dt * 2);
       
       for (let i = 0; i < n; i++) {
-        const p = P[i], br = gb + act[p.r] * .045 * Math.sin(now / 260 + p.ph), q = pr(p.x * br, p.y * br, p.z * br); X[i] = q[0]; Y[i] = q[1]; Z[i] = q[2];
+        const p = P[i], br = gb + act[p.r] * .045 * Math.sin(now / 260 + p.ph), kp = KP[i] = sst(p.th - .1, p.th + .1, restS * 1.08), u = 1 - kp, jt = u * Math.sin(now / 500 + p.ph) * .02,
+          q = pr(p.x * br + (p.sx * .7 + RS[p.row]) * u + jt, p.y * br + p.sy * u * .8 + jt, p.z * br + p.sz * u + jt); if (u > .04 && i % 3 === 0) { const g = pr(p.x * br, p.y * br, p.z * br); GX[i] = g[0]; GY[i] = g[1]; } X[i] = q[0]; Y[i] = q[1]; Z[i] = q[2];
         const dx = X[i] - mx, dy = Y[i] - my; if (dx * dx + dy * dy < 2600) { fl[i] = Math.max(fl[i], .9); if (Math.random() < .05 && adj[i].length) go(adj[i][(Math.random() * adj[i].length) | 0], i); }
       }
 
@@ -170,12 +188,15 @@
       
       // 1. Отрисовка связей
       cx.globalCompositeOperation = 'lighter'; cx.lineWidth = 1;
-      for (let r = 0; r < R; r++) { cx.strokeStyle = 'rgba(' + RGB[r] + ',' + (.05 + act[r] * .13).toFixed(3) + ')'; cx.beginPath(); for (const e of byR[r]) { cx.moveTo(X[e.a], Y[e.a]); cx.lineTo(X[e.b], Y[e.b]); } cx.stroke(); }
+      for (let r = 0; r < R; r++) { cx.strokeStyle = 'rgba(' + RGB[r] + ',' + (.05 + act[r] * .13).toFixed(3) + ')'; cx.beginPath(); for (const e of byR[r]) { if (KP[e.a] < .55 || KP[e.b] < .55) continue; cx.moveTo(X[e.a], Y[e.a]); cx.lineTo(X[e.b], Y[e.b]); } cx.stroke(); }
       
+      // the place where the memory will come back: a faint ghost of the assembled shape
+      if (opts.restore) { cx.fillStyle = 'rgba(' + RGB[3] + ',1)'; for (let i = 0; i < n; i += 3) { const u = 1 - KP[i]; if (u > .04) { cx.globalAlpha = .07 * u; cx.fillRect(GX[i] - .6, GY[i] - .6, 1.2, 1.2); } } cx.globalAlpha = 1; }
+
       // 2. Отрисовка нейронов
       for (let i = 0; i < n; i++) {
-        const p = P[i], a = act[p.r], f = fl[i], sz = .9 + a * 1.8 + f * 2.4; fl[i] = f * Math.exp(-dt * 5);
-        cx.fillStyle = 'rgba(' + RGB[p.r] + ',' + Math.min(1, .16 + a * .55 * (.6 + .4 * Z[i]) + f * .6).toFixed(2) + ')'; cx.fillRect(X[i] - sz / 2, Y[i] - sz / 2, sz, sz);
+        const p = P[i], a = act[p.r], f = fl[i], kk = 1 + 1.3 * (1 - KP[i]), sz = (1.1 + a * 1.8 + f * 2.4) * (1 + .6 * (1 - KP[i]));       // scattered fragments glow like debris in the water fl[i] = f * Math.exp(-dt * 5);
+        cx.fillStyle = 'rgba(' + RGB[p.r] + ',' + Math.min(1, (.16 + a * .55 * (.6 + .4 * Z[i]) + f * .6) * kk).toFixed(2) + ')'; cx.fillRect(X[i] - sz / 2, Y[i] - sz / 2, sz, sz);
       }
       
       // 3. Отрисовка пульсов
@@ -244,6 +265,11 @@
           cx.beginPath(); cx.moveTo(ex, o.ly); cx.lineTo(o.x, o.y);
           cx.moveTo(o.x, o.y); cx.lineTo(o.x - 6 * Math.cos(ang2 - .45), o.y - 6 * Math.sin(ang2 - .45)); cx.moveTo(o.x, o.y); cx.lineTo(o.x - 6 * Math.cos(ang2 + .45), o.y - 6 * Math.sin(ang2 + .45)); cx.stroke();
         }
+      }
+
+      if (opts.restore) {                                      // the progress of the reassembly
+        const pc = Math.round(restS * 100); cx.globalCompositeOperation = 'source-over'; cx.textAlign = 'right'; cx.textBaseline = 'middle'; cx.fillStyle = 'rgba(231,233,238,.72)'; cx.fillText((opts.title || 'restored') + '  ' + pc + '%', W - 16, H - 22);
+        cx.fillStyle = 'rgba(231,233,238,.12)'; cx.fillRect(W - 196, H - 10, 180, 1.5); cx.fillStyle = 'rgba(' + RGB[5] + ',.9)'; cx.fillRect(W - 196, H - 10, 180 * restS, 1.5);
       }
 
       // 6. Отрисовка HUD карточек

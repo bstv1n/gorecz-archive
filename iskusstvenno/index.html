@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=17" />
+  <link rel="stylesheet" href="style.css?v=20" />
 </head>
 <body id="top">
   <!-- Boot Screen & Config -->
@@ -216,7 +216,7 @@
       <section class="mind" id="mind" aria-label="Neural response">
         <h2 class="cap">neural response</h2>
         <canvas id="brain" aria-hidden="true"></canvas>
-        <p class="mind-note">stylised · submerged cortex activity · move the cursor over it to excite neurons, drag to turn</p>
+        <p class="mind-note">память соберётся по ходу трека · проведи курсором по нейронам, перетащи, чтобы повернуть</p>
       </section>
 
       <!-- ───────────── about ───────────── -->
@@ -267,18 +267,19 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="script.js?v=16"></script>
-  <script src="engine.js?v=17"></script>
-  <script src="brain.js?v=16"></script>
-  <script src="grade.js?v=17"></script>
-  <script src="ice-deck.js?v=16"></script>
-  <script src="wire.js?v=17"></script>
-  <script src="fog.js?v=17"></script>
-  <script src="patch.js?v=17"></script>
-  <script src="cursor.js?v=16"></script>
-  <script src="deck.js?v=16"></script>
-  <script src="outro.js?v=16"></script>
-  <script>GoreczBrain.mount(document.getElementById('brain'), function () { return window.GS; });</script>
+  <script src="script.js?v=20"></script>
+  <script src="engine.js?v=20"></script>
+  <script src="brain.js?v=20"></script>
+  <script src="grade.js?v=20"></script>
+  <script src="ice-deck.js?v=20"></script>
+  <script src="wire.js?v=20"></script>
+  <script src="fog.js?v=20"></script>
+  <script src="patch.js?v=20"></script>
+  <script src="cursor.js?v=20"></script>
+  <script src="deck.js?v=20"></script>
+  <script src="outro.js?v=20"></script>
+  <script src="world.js?v=20"></script>
+  <script>GoreczBrain.mount(document.getElementById('brain'), function () { return window.GS; }, window.WORLD && WORLD.brain);</script>
 <script>
 document.querySelector('a[href$="#from-002"]').addEventListener('click', function (e) {
   if (e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;

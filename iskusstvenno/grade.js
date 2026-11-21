@@ -14,7 +14,7 @@
   const cv = document.createElement('canvas'); cv.id = 'grade';
   const gl = cv.getContext('webgl', { alpha: false, antialias: false, preserveDrawingBuffer: true }); if (!gl) return fail('no-webgl', 'WebGL is not available in this browser');
   const FRAG = `precision highp float;
-    uniform sampler2D uV, uW; uniform vec2 uRes, uCover, uMouse; uniform float uT, uBass, uWave, uS; uniform vec4 uFx; float S;
+    uniform sampler2D uV, uW; uniform vec2 uRes, uCover, uMouse; uniform float uT, uBass, uWave, uS, uWireOn; uniform vec4 uFx; float S;
     float h(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
     float vn(vec2 p){ vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f); return mix(mix(h(i),h(i+vec2(1.,0.)),f.x),mix(h(i+vec2(0.,1.)),h(i+vec2(1.,1.)),f.x),f.y); }
     // marine snow: soft round particles; they sink slowly and, when you scroll down, stream upwards past you (nearer layers faster)
@@ -40,12 +40,14 @@
       float sx=(h(vec2(row,tk+9.))-.5)*.03*step(.975-.12*uFx.z,h(vec2(row,tk)))*(.25+e);
       float len=(.0025+.03*e*(.4+h(vec2(row,3.))))*(1.+z*.08), ca=.0012*(1.+uWave*3.+under*2.+uFx.z*6.);
       vec3 v=vec3(0.), w=vec3(0.); float wa=0.;
+      int TAPS=len<.004?3:7; float tf=float(TAPS);                                   // calm picture: 3 jittered taps are enough, smear and depth need 7
       for(int i=0;i<7;i++){
-        vec2 u2=vec2(base.x+sx-.005*under+(float(i)/6.-.5+(h(gl_FragCoord.xy+float(i))-.5)/6.)*len,base.y)+wob, vu=(u2-.5)*uCover+.5;
+        if(i>=TAPS) break;
+        vec2 u2=vec2(base.x+sx-.005*under+(float(i)/(tf-1.)-.5+(h(gl_FragCoord.xy+float(i))-.5)/(tf-1.))*len,base.y)+wob, vu=(u2-.5)*uCover+.5;
         v.r+=texture2D(uV,vu+vec2(ca,0.)).r; v.g+=texture2D(uV,vu).g; v.b+=texture2D(uV,vu-vec2(ca,0.)).b;
-        vec4 s=texture2D(uW,u2); w+=s.rgb; wa+=s.a;
+        vec4 s=uWireOn>.5?texture2D(uW,u2):vec4(0.); w+=s.rgb; wa+=s.a;
       }
-      v/=7.; w/=7.; wa/=7.;
+      v/=tf; w/=tf; wa/=tf;
       vec3 gh=texture2D(uV,((base+vec2(-.02,.004)+wob)-.5)*uCover+.5).rgb; v=mix(v,max(v,gh*vec3(.8,.95,1.1)),uFx.x*.55);   // эхо: a ghost copy of the picture
       vec3 col=v*(1.-wa*.9)+mix(w,vec3(.30,.40,.50)*wa,.22);
       // light dies with depth, red first, then green; the water gets murky and the light behind it dims
@@ -87,15 +89,20 @@
   addEventListener('resize', resize); resize(); document.body.classList.add('grade-on');
   const gauge = document.createElement('div'); gauge.id = 'depthGauge'; document.body.appendChild(gauge);
   const ss = (v) => { v = Math.min(1, Math.max(0, v)); return v * v * (3 - 2 * v); }; st.state = 'on'; { const x = gl.getExtension('WEBGL_debug_renderer_info'); st.gpu = 'GPU: ' + (x ? gl.getParameter(x.UNMASKED_RENDERER_WEBGL) : 'n/a'); } report();
-  let fAcc = 0, fN = 0, alive = true, n = 0, sS = 0, tPrev = 0, mu = [0.5, 0.5];
+  let newFrame = true, lastT = -1, wireUp = false, fAcc = 0, fN = 0, alive = true, n = 0, sS = 0, tPrev = 0, mu = [0.5, 0.5];
   addEventListener('pointermove', (e) => { mu = [e.clientX / innerWidth, 1 - e.clientY / innerHeight]; }, { passive: true });
   const fallback = (why) => { alive = false; cv.remove(); const g = document.getElementById('depthGauge'); if (g) g.remove(); document.body.classList.remove('grade-on'); fail('fallback', why); };
+  if (vid.requestVideoFrameCallback) { const arm = () => vid.requestVideoFrameCallback(() => { newFrame = true; arm(); }); arm(); }
   function frame(now) {
     if (!alive) return; requestAnimationFrame(frame); if (vid.paused) vid.play().catch(() => {}); const S = window.GS || {}, va = (vid.videoWidth || 2560) / (vid.videoHeight || 1440), wa = cv.width / cv.height;
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    if (vid.readyState >= 2 && !window.__gradeTestBlack) { try { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tv); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, vid); } catch (e) { return fallback('cannot read the video (' + e.message + '). Open the page through a local server, not file://'); } }
+    const fresh = vid.requestVideoFrameCallback ? newFrame : vid.currentTime !== lastT;                   // the video has 24 fps, the page 60: upload only new frames
+    if (fresh && vid.readyState >= 2 && !window.__gradeTestBlack) { newFrame = false; lastT = vid.currentTime; try { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tv); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, vid); } catch (e) { return fallback('cannot read the video (' + e.message + '). Open the page through a local server, not file://'); } }
     const wc = window.__wireCanvas; gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tw);
-    if (wc && wc.width) { gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, wc); }
+    const wireOn = (window.scrollY || 0) < innerHeight * 1.4;                              // the cables only exist near the top of the page
+    if (wireOn && wc && wc.width) { gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, wc); wireUp = true; }
+    else if (!wireOn && wireUp) { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); wireUp = false; }
+    gl.uniform1f(U('uWireOn'), wireOn ? 1 : 0);
     const dt = Math.min(0.1, (now - tPrev) / 1000); tPrev = now;
     fAcc += dt; fN++; st.screens = sS; st.vt = vid.currentTime;
     if (fN === 45) { const avg = fAcc / fN; st.fps = Math.round(1 / avg); fAcc = 0; fN = 0;               // too slow? render the picture at lower resolution
